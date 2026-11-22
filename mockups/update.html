@@ -1,0 +1,1060 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Update · NextBSD</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  color-scheme: dark;
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --plane:#16161b; --control:#26262d; --raised:#33333a; --bevel:#55555f; --shadow:#0a0a0a;
+  --text:#f5f5f7; --text-2:#b8b8c0; --text-3:#8b8b94;
+  --accent:#00d4ff; --sel:#0a5fd1; --sel-text:#fff; --field:#000; --frame:#000;
+  --desk:#000; --menubar:rgba(22,22,27,.8); --dock:rgba(31,31,31,.55);
+  --link:#5fb4ff; --ok:#6fd38a; --warn:#ffb454; --err:#ff6b6b;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--desk);color:var(--text)}
+body{font:13px/1.4 var(--font);-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+a{color:var(--link)}
+.mono{font-family:var(--mono);font-size:.92em;letter-spacing:-.01em}
+.vh{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+[hidden]{display:none!important}
+
+/* ---------- desktop ---------- */
+.desk{
+  min-height:100vh;min-height:100dvh;
+  padding:0 max(16px, env(safe-area-inset-right, 0px)) 96px max(16px, env(safe-area-inset-left, 0px));
+  background:var(--desk);display:flex;flex-direction:column;align-items:center;
+}
+.menubar{
+  position:sticky;top:0;z-index:30;align-self:stretch;margin:0 calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  height:24px;display:flex;align-items:center;gap:16px;padding:0 14px;
+  background:var(--menubar);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
+  font-size:13px;color:var(--text);user-select:none
+}
+.menubar b{font-weight:700}
+.menubar .sp{flex:1}
+.menubar .st{display:flex;align-items:center;gap:14px;color:var(--text)}
+.menubar .st svg{width:15px;height:15px;display:block;fill:none;stroke:var(--text);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.menubar .clock{font-variant-numeric:tabular-nums}
+.wifi .slash{display:none}
+.wifi.off .slash{display:inline}
+.wifi.off .waves{opacity:.35}
+
+.dock{position:fixed;left:50%;bottom:8px;transform:translateX(-50%);z-index:30;display:flex;align-items:flex-end;gap:6px;padding:6px 8px;
+  background:var(--dock);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-radius:16px;border:1px solid rgba(255,255,255,.08)}
+.dock .tile{position:relative;width:48px;height:48px;display:grid;place-items:center}
+.dock .tile.on::after{content:"";position:absolute;bottom:-4px;left:50%;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:var(--text)}
+.dock .sepr{width:1px;align-self:stretch;margin:4px 4px;background:rgba(255,255,255,.28)}
+.dock .tile.app{cursor:pointer}
+.dbadge{position:absolute;top:-3px;right:-3px;min-width:18px;height:18px;padding:0 4px;display:grid;place-items:center;font:700 11px/18px var(--font);color:#fff;background:var(--sel);border:1px solid var(--shadow)}
+.dbadge.warn{background:#b8691a}
+.dbadge svg{width:11px;height:11px;fill:none;stroke:#fff;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.dprog{position:absolute;left:5px;right:5px;bottom:3px;height:6px;background:var(--field);border:1px solid;border-color:var(--shadow) var(--bevel) var(--bevel) var(--shadow)}
+.dprog i{position:absolute;inset:0 auto 0 0;background:var(--sel)}
+
+/* ---------- window ---------- */
+.win{
+  position:relative;margin-top:28px;width:min(520px,100%);min-height:0;
+  display:flex;flex-direction:column;background:var(--plane);
+  border:1px solid var(--frame);box-shadow:0 16px 48px rgba(0,0,0,.7), 0 0 0 1px #2a2a30;
+}
+.titlebar{height:22px;flex:none;display:flex;align-items:center;justify-content:space-between;position:relative;padding:0 3px;background:var(--frame);user-select:none}
+.titlebar .wbtn{width:18px;height:18px;padding:0;border:0;background-color:transparent;background-size:18px 18px;background-repeat:no-repeat;cursor:pointer;position:relative;z-index:1}
+.wbtn.mini{background-image:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAAX0lEQVR42mMIDY3/Ty3MxcX1nwHEMDa2ogoeNRCBOzv7/m/ZsgMvBqkh2kCQhq9fv+PFIDUkGzhv3uL/xcWVKBgkRraBIAPQ5UBiowYOYKRQLdlQPWGPljakGQgiqIkByUcIBbTD8bAAAAAASUVORK5CYII=")}
+.wbtn.mini:hover,.wbtn.mini:active{background-image:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAAX0lEQVR42mPg4uL6Ty0cGhr/nwHEMDa2ogoeNRCBOzv7/m/ZsgMvBqkh2kCQhq9fv+PFIDUkGzhv3uL/xcWVKBgkRraBIAPQ5UBiowYOYKRQLdlQPWGPljakGQgiqIkBi0MJ27P6wEwAAAAASUVORK5CYII=")}
+.wbtn.close{background-image:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAAZ0lEQVR42mMIDY3/Ty3MxcX1nwHEMDa2ogoeNRCB799/BMYeHv4YciAxmDxJBn79+h3DUJhhMDmiDUTXCOJjEyMpDNENIGQYUZGCbCghw+hvIFW9TPVIoXqyoXrCHi1tSDMQRFATAwCWHPXmLhmTxgAAAABJRU5ErkJggg==")}
+.wbtn.close:hover,.wbtn.close:active{background-image:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAAZ0lEQVR42mPg4uL6Ty0cGhr/nwHEMDa2ogoeNRCB799/BMYeHv4YciAxmDxJBn79+h3DUJhhMDmiDUTXCOJjEyMpDNENIGQYUZGCbCghw+hvIFW9TPVIoXqyoXrCHi1tSDMQRFATAwBYGPe8bgn2qQAAAABJRU5ErkJggg==")}
+.wtitle{position:absolute;left:0;right:0;text-align:center;font-size:13px;font-weight:700;color:#fff;pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 30px}
+
+.wbody{flex:1;display:flex;flex-direction:column;min-height:0;position:relative}
+#view{flex:1;padding:20px 22px 22px}
+
+/* buttons */
+.gel{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:6px;height:24px;padding:0 16px;cursor:pointer;white-space:nowrap;font-size:13px;
+  background:var(--control);color:var(--text);border:1px solid;border-color:var(--bevel) var(--shadow) var(--shadow) var(--bevel);border-radius:0}
+.gel:hover{background:#2c2c34}
+.gel:active{border-color:var(--shadow) var(--bevel) var(--bevel) var(--shadow);background:var(--raised)}
+.gel.blue{outline:1px solid var(--text);outline-offset:1px;font-weight:600}
+.gel[disabled]{color:var(--text-3);cursor:default;outline-color:var(--raised)}
+.gel.small{height:20px;font-size:11.5px;padding:0 10px}
+.gel.big{height:26px;padding:0 22px}
+.linkbtn{border:0;background:none;padding:0;color:var(--link);cursor:pointer;text-decoration:underline;font-size:inherit}
+
+/* focus */
+:focus{outline:none}
+:focus-visible{outline:2px solid var(--accent)!important;outline-offset:1px}
+h1:focus-visible{outline-offset:3px}
+
+/* progress */
+.prog{position:relative;height:12px;width:160px;border:1px solid;border-color:var(--shadow) var(--bevel) var(--bevel) var(--shadow);background:var(--field);overflow:hidden}
+.prog .bar{position:absolute;inset:0 auto 0 0;background:var(--sel);transition:width .12s linear}
+.prog.wide{width:100%;height:14px}
+.prog.ind .bar{width:28%;animation:ind 1.25s linear infinite}
+@keyframes ind{from{left:-28%}to{left:100%}}
+.progline{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;margin-top:6px;font-size:11.5px;color:var(--text-2)}
+
+.bevel{border:1px solid;border-color:var(--bevel) var(--shadow) var(--shadow) var(--bevel)}
+.sunken{border:1px solid;border-color:var(--shadow) var(--bevel) var(--bevel) var(--shadow)}
+.muted{color:var(--text-2)}
+.ico{display:block;flex:none}
+
+/* ---------- Update views ---------- */
+.uhead{display:flex;gap:18px;align-items:flex-start}
+.uicon{position:relative;flex:none}
+.uicon .corner{position:absolute;right:-4px;bottom:-4px;width:24px;height:24px}
+.uh{flex:1;min-width:0}
+.uh h1{margin:4px 0 2px;font-size:18px;font-weight:700}
+.uh .sub{margin:0;color:var(--text-2)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0;padding:0;list-style:none}
+.chips li{font-size:11px;padding:1px 7px;background:var(--control);border:1px solid;border-color:var(--bevel) var(--shadow) var(--shadow) var(--bevel);color:var(--text-2);white-space:nowrap}
+.chips li b{color:var(--text);font-weight:600}
+.chips li.sec{color:var(--warn)}
+.acts{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:14px}
+.acts .sp{flex:1}
+.block{margin-top:18px}
+.dlbox{margin-top:14px}
+
+.callout{margin-top:16px;padding:9px 12px;background:var(--control);border:1px solid;border-color:var(--shadow) var(--bevel) var(--bevel) var(--shadow);display:flex;gap:10px;align-items:flex-start}
+.callout svg{width:18px;height:18px;flex:none;margin-top:1px;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.callout p{margin:0}
+.callout p+p{margin-top:4px}
+.callout.ok svg{stroke:var(--ok)}
+.callout.warn svg{stroke:var(--warn)}
+.callout.err svg{stroke:var(--err)}
+.callout.info svg{stroke:var(--text-2)}
+.callout .t{font-weight:600}
+
+.box{background:var(--plane);border:1px solid var(--raised);margin-top:18px}
+.box>h3{margin:0;padding:7px 12px;font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--text-2);border-bottom:1px solid var(--raised);background:var(--control);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.box>h3 .linkbtn{font-size:11px;letter-spacing:0;text-transform:none;font-weight:400;text-decoration:none}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0;padding:10px 12px;font-size:12px}
+.facts dt{color:var(--text-2);text-align:right}
+.facts dd{margin:0;min-width:0;overflow-wrap:anywhere}
+
+.disc{margin-top:14px}
+.dbtn{display:flex;align-items:center;gap:6px;border:0;background:none;padding:2px 0;cursor:pointer;color:var(--text);font-weight:600;font-size:12.5px}
+.dbtn svg{width:8px;height:8px;fill:var(--text-2);transition:transform .12s}
+.dbtn[aria-expanded="true"] svg{transform:rotate(90deg)}
+.dbtn .n{font-weight:400;color:var(--text-2)}
+.dbody{margin-top:6px}
+.notes{background:var(--field);border:1px solid;border-color:var(--shadow) var(--bevel) var(--bevel) var(--shadow);padding:10px 14px;max-height:260px;overflow:auto}
+.notes p{margin:0 0 8px;max-width:64ch}
+.notes h3{margin:10px 0 2px;font-size:12.5px}
+.notes ul{margin:0;padding-left:18px;max-width:62ch}
+.notes li{margin:1px 0}
+.notes .samp{margin:10px 0 0;font-size:11px;color:var(--text-3)}
+
+table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
+.grid th{padding:0 8px;height:22px;font-weight:600;text-align:left;font-size:11.5px;color:var(--text-2);background:var(--control);border-bottom:1px solid var(--shadow);border-right:1px solid var(--raised)}
+.grid td{padding:4px 8px;font-size:12.5px;border-bottom:1px solid var(--raised);vertical-align:top}
+.grid td.size,.grid th.size{text-align:right;font-family:var(--mono);font-size:11.5px;white-space:nowrap}
+.grid .c-size{width:92px}
+.pkgs .pn{font-family:var(--mono);font-size:11.5px;overflow-wrap:anywhere}
+.pkgs .pd{display:block;font-size:11.5px;color:var(--text-2)}
+.pkgs .tag{display:inline-block;margin-left:6px;font:600 9.5px var(--font);letter-spacing:.06em;text-transform:uppercase;color:var(--warn);border:1px solid #6b4a20;padding:0 4px;vertical-align:1px}
+.pkgwrap{border:1px solid;border-color:var(--shadow) var(--bevel) var(--bevel) var(--shadow);max-height:300px;overflow:auto}
+.pkgcap{margin:0 0 6px;font-size:11.5px;color:var(--text-2)}
+
+/* install steps */
+.steps{list-style:none;margin:16px 0 0;padding:8px 12px;background:var(--field);border:1px solid;border-color:var(--shadow) var(--bevel) var(--bevel) var(--shadow)}
+.steps li{display:flex;gap:10px;align-items:flex-start;padding:4px 0;color:var(--text-3)}
+.steps li+li{border-top:1px solid #1d1d22}
+.steps .g{width:14px;height:14px;flex:none;margin-top:2px;position:relative}
+.steps .g::before{content:"";position:absolute;inset:1px;border-radius:50%;border:1.5px solid var(--bevel)}
+.steps li.doing{color:var(--text)}
+.steps li.doing .g::before{border-color:var(--accent);border-right-color:transparent;animation:spin .8s linear infinite}
+.steps li.done{color:var(--text-2)}
+.steps li.done .g::before{border:0;inset:2px 4px 3px 4px;border-radius:0;border-right:2px solid var(--ok);border-bottom:2px solid var(--ok);transform:rotate(40deg);inset:0 4px 3px 4px}
+.steps li.fail{color:var(--err)}
+.steps li.fail .g::before{content:"\00d7";border:0;inset:-3px 0 0 1px;font:700 15px/1 var(--font);color:var(--err)}
+.steps li.stop{color:var(--warn)}
+.steps li.stop .g::before{border:0;inset:3px;background:var(--warn);border-radius:0}
+.steps .sd{display:block;font:11px var(--mono);color:var(--text-2);margin-top:1px;overflow-wrap:anywhere}
+@keyframes spin{to{transform:rotate(360deg)}}
+.log{margin:6px 0 0;max-height:180px;overflow:auto;padding:8px 10px;background:var(--field);border:1px solid;border-color:var(--shadow) var(--bevel) var(--bevel) var(--shadow);font:11px/1.5 var(--mono);color:#c9c9d1;white-space:pre-wrap;overflow-wrap:anywhere}
+.log .e{color:var(--err)}
+
+/* ---------- sheet ---------- */
+.sheetwrap{position:absolute;inset:0;z-index:20;display:flex;justify-content:center;background:rgba(0,0,0,.35)}
+.sheet{width:min(450px,calc(100% - 24px));align-self:flex-start;padding:16px 18px 14px;display:flex;gap:14px;background:var(--plane);
+  border:1px solid;border-color:var(--bevel) var(--shadow) var(--shadow) var(--bevel);border-top:0;box-shadow:0 10px 30px rgba(0,0,0,.7);animation:sheet .18s ease-out}
+@keyframes sheet{from{transform:translateY(-100%)}}
+.sheet h2{margin:0 0 6px;font-size:13px;font-weight:700}
+.sheet p{margin:0 0 14px;font-size:12px;color:var(--text-2)}
+.sheet .btns{display:flex;justify-content:flex-end;gap:12px}
+.authf{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center;margin:0 0 14px}
+.authf label{font-size:12px;color:var(--text-2);text-align:right}
+.authf input{height:24px;background:var(--field);color:var(--text);border:1px solid;border-color:var(--shadow) var(--bevel) var(--bevel) var(--shadow);padding:0 6px;border-radius:0;font-size:13px;min-width:0}
+.autherr{color:var(--err);font-size:12px;min-height:16px}
+.sheet.shake{animation:shake .3s}
+@keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+
+/* ---------- status + resize bar ---------- */
+.statusbar{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:3px 10px;font-size:11px;color:var(--text-2);border-top:1px solid var(--raised);min-height:22px;background:var(--plane);flex:none}
+.statusbar #status-msg{font-weight:600;color:var(--text)}
+.statusbar .note{text-align:right}
+.resizebar{height:7px;flex:none;background:var(--control);border-top:1px solid var(--shadow);display:flex}
+.resizebar span{flex:none;width:26px;border-right:1px solid var(--shadow);box-shadow:inset -1px 0 0 var(--bevel)}
+.resizebar span.mid{flex:1}
+.resizebar span:last-child{border-right:0;box-shadow:none}
+.closedhint{margin-top:30vh;color:var(--text-3);text-align:center;font-size:12px}
+
+/* ---------- menus ---------- */
+.mtop{border:0;background:none;padding:2px 8px;font:inherit;color:var(--text);cursor:default}
+button.mtop{cursor:pointer}
+button.mtop[aria-expanded="true"]{background:var(--sel);color:#fff}
+.mwrap{position:relative}
+.mlist{position:absolute;left:0;top:22px;min-width:210px;background:var(--control);border:1px solid;border-color:var(--bevel) var(--shadow) var(--shadow) var(--bevel);padding:2px 0;z-index:40;box-shadow:0 6px 18px rgba(0,0,0,.6)}
+.mlist.right{left:auto;right:0}
+.mlist button{display:flex;justify-content:space-between;gap:18px;width:100%;border:0;background:none;color:var(--text);text-align:left;padding:3px 10px;font-size:13px;cursor:pointer;white-space:nowrap}
+.mlist button+button{border-top:1px solid var(--raised)}
+.mlist button:hover,.mlist button:focus-visible{background:var(--sel);color:#fff;outline:none!important}
+.mlist kbd{font:inherit;color:var(--text-2)}
+.mlist button:hover kbd,.mlist button:focus-visible kbd{color:#fff}
+.mlist .mhead{padding:5px 10px 6px;font-size:12px;color:var(--text-2);border-bottom:1px solid var(--shadow);white-space:nowrap}
+.mlist .mhead b{display:block;color:var(--text);font-size:12.5px}
+.mx{position:relative;border:0;background:none;padding:2px 3px;margin:0 -3px;cursor:pointer;display:grid;place-items:center}
+.mx[aria-expanded="true"]{background:var(--sel)}
+.mx .dot{position:absolute;top:1px;right:0;width:7px;height:7px;background:var(--accent);border:1px solid var(--shadow)}
+.mx .dot.warn{background:var(--warn)}
+.mx.busy svg{animation:spin 1.6s linear infinite}
+
+/* ---------- preferences panel ---------- */
+.panel{position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:35;width:min(460px,calc(100% - 32px));max-height:calc(100dvh - 90px);overflow:auto;background:var(--plane);border:1px solid var(--frame);box-shadow:0 16px 48px rgba(0,0,0,.75),0 0 0 1px #2a2a30}
+.pbody{padding:14px 18px 14px;position:relative}
+fieldset{border:1px solid;border-color:var(--shadow) var(--bevel) var(--bevel) var(--shadow);margin:0 0 12px;padding:6px 12px 10px;min-width:0}
+fieldset.bare{border:0;padding:0;margin:0}
+legend{font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--text-2);padding:0 6px}
+.row{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:12.5px;flex-wrap:wrap}
+.chk{display:flex;gap:10px;align-items:flex-start;padding:7px 0;font-size:12.5px;cursor:pointer}
+.chk+.chk,.row+.chk,.chk+.row{border-top:1px solid var(--raised)}
+.chk .hint,.radio .hint{display:block;color:var(--text-2);font-size:11.5px;margin-top:1px}
+.cbx{appearance:none;-webkit-appearance:none;width:14px;height:14px;margin:2px 0 0;flex:none;cursor:pointer;background:var(--field);
+  border:1px solid;border-color:var(--shadow) var(--bevel) var(--bevel) var(--shadow)}
+.cbx:checked::after{content:"";display:block;width:4px;height:8px;margin:0 0 0 4px;border:solid var(--text);border-width:0 2px 2px 0;transform:rotate(40deg)}
+.radio{display:flex;gap:10px;align-items:flex-start;padding:7px 0;font-size:12.5px;cursor:pointer}
+.radio+.radio{border-top:1px solid var(--raised)}
+.radio input{appearance:none;-webkit-appearance:none;width:14px;height:14px;margin:2px 0 0;border-radius:50%;background:var(--field);border:1px solid;border-color:var(--shadow) var(--bevel) var(--bevel) var(--shadow);flex:none;cursor:pointer}
+.radio input:checked{background:radial-gradient(circle,var(--text) 0 3px,var(--field) 3.5px)}
+fieldset[disabled] .chk,fieldset[disabled] .radio,fieldset[disabled] .row{color:var(--text-3);cursor:default}
+fieldset[disabled] input,fieldset[disabled] select{cursor:default;opacity:.6}
+.popup{position:relative;display:inline-block}
+.popup select{appearance:none;-webkit-appearance:none;height:22px;padding:0 24px 0 8px;border-radius:0;font-size:12px;background:var(--control);color:var(--text);border:1px solid;border-color:var(--bevel) var(--shadow) var(--shadow) var(--bevel);cursor:pointer}
+.popup::after{content:"";position:absolute;right:9px;top:50%;width:6px;height:6px;margin-top:-5px;border:solid var(--text-2);border-width:0 1.5px 1.5px 0;transform:rotate(45deg);pointer-events:none}
+.lockrow{display:flex;align-items:center;gap:8px;padding-top:4px;font-size:12px;color:var(--text-2)}
+.lockbtn{width:26px;height:26px;display:grid;place-items:center;padding:0;cursor:pointer;background:var(--control);border:1px solid;border-color:var(--bevel) var(--shadow) var(--shadow) var(--bevel)}
+.lockbtn:active{border-color:var(--shadow) var(--bevel) var(--bevel) var(--shadow)}
+.lockbtn svg{width:15px;height:15px}
+
+/* ---------- restart screen ---------- */
+.boot{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,0);transition:background-color .9s ease, opacity .7s ease;display:grid;place-items:center;color:#d6d6dc}
+.boot.dim{background:rgba(0,0,0,.6)}
+.boot.black{background:#000}
+.boot.out{opacity:0}
+.bstage{width:100%;height:100%;display:grid;place-items:center;padding:16px}
+.bmsg{margin:12px 0 0;font-size:13px;color:#c8c8d0;text-align:center}
+.bspin{width:26px;height:26px;margin:0 auto;border-radius:50%;border:2.5px solid #3a3a42;border-top-color:#d6d6dc;animation:spin .9s linear infinite}
+.loader{width:min(620px,100%);font:13px/1.6 var(--mono);color:#c8c8d0;align-self:center}
+.loader h2{font:600 13px var(--mono);margin:0 0 2px;color:#fff}
+.loader .rule{border-top:1px solid #3a3a42;margin:6px 0 12px}
+.loader ul{list-style:none;margin:0 0 14px;padding:0;border:1px solid #3a3a42}
+.loader li+li{border-top:1px solid #222228}
+.loader button{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;width:100%;border:0;background:none;color:#d6d6dc;font:inherit;text-align:left;padding:5px 10px;cursor:pointer}
+.loader button[aria-selected="true"]{background:var(--sel);color:#fff}
+.loader button .nt{color:#8b8b94}
+.loader button[aria-selected="true"] .nt{color:#dbe7ff}
+.loader .cd{min-height:1.6em}
+.loader .keys{color:#8b8b94;font-size:12px}
+.splash{text-align:center;width:min(320px,100%)}
+.wordmark{font:700 30px var(--font);letter-spacing:.02em;color:#fff}
+.wordmark span{color:var(--accent)}
+.splash .prog{width:200px;margin:26px auto 0;height:8px}
+.splash .bmsg{min-height:1.4em;font-size:12px;color:#8b8b94}
+
+/* ---------- simulator controls ---------- */
+.sim{position:fixed;left:12px;bottom:12px;z-index:95;width:290px;background:#0c0c10;border:1px dashed #2f6f80;color:var(--text-2);font-size:12px;box-shadow:0 8px 24px rgba(0,0,0,.6)}
+.simtog{width:100%;display:flex;align-items:center;gap:8px;border:0;background:none;padding:7px 10px;cursor:pointer;color:var(--accent);font:600 10.5px var(--font);letter-spacing:.1em;text-transform:uppercase;text-align:left}
+.simtog svg{width:8px;height:8px;fill:var(--accent);transition:transform .12s}
+.simtog[aria-expanded="true"] svg{transform:rotate(90deg)}
+.simtog .st{margin-left:auto;font:400 10.5px var(--mono);letter-spacing:0;text-transform:none;color:var(--text-3)}
+.simbody{padding:0 10px 10px;border-top:1px dashed #2f6f80}
+.simbody p{margin:8px 0;font-size:11px;color:var(--text-3)}
+.simbody h4{margin:10px 0 4px;font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--text-2)}
+.simbtns{display:flex;flex-wrap:wrap;gap:6px}
+.simbody .popup,.simbody .popup select{width:100%}
+.seg2{display:inline-flex}
+.seg2 label{position:relative}
+.seg2 input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.seg2 span{display:block;padding:0 12px;height:22px;line-height:20px;background:var(--control);border:1px solid;border-color:var(--bevel) var(--shadow) var(--shadow) var(--bevel);font-size:12px;color:var(--text)}
+.seg2 input:checked+span{background:var(--sel);color:#fff;border-color:var(--shadow) var(--bevel) var(--bevel) var(--shadow)}
+.seg2 input:focus-visible+span{outline:2px solid var(--accent);outline-offset:1px}
+.simbody .chk{padding:5px 0;font-size:12px;border:0!important}
+
+/* ---------- narrow ---------- */
+@media (max-width:1060px){
+  .sim{position:static;width:min(520px,100%);margin-top:16px;box-shadow:none}
+}
+@media (max-width:760px){
+  .menubar .menus .mtop[aria-hidden],.menubar .st .opt{display:none}
+  .menubar{gap:8px;padding:0 8px}
+  .dock{display:none}
+  .desk{padding-bottom:24px}
+  .win{margin-top:12px;min-height:0}
+  #view{padding:16px 14px 18px}
+  .uhead{gap:12px}
+  .uicon svg.big{width:48px;height:48px}
+  .uicon .corner{width:20px;height:20px}
+  .statusbar{flex-direction:column;align-items:flex-start;gap:2px}
+  .statusbar .note{text-align:left}
+  .facts{grid-template-columns:1fr}
+  .facts dt{text-align:left;margin-top:4px}
+  .grid .c-size{width:74px}
+  .panel{top:40px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<div class="desk" id="desk">
+  <div class="menubar">
+    <span class="menus" style="display:flex;gap:2px;align-items:center">
+      <span class="mwrap"><button type="button" class="mtop" id="menu-app" aria-haspopup="true" aria-expanded="false" aria-controls="menu-app-list"><b>Update</b></button>
+        <div class="mlist" id="menu-app-list" hidden role="group" aria-label="Update menu">
+          <button type="button" data-cmd="about">About Update</button>
+          <button type="button" data-cmd="check">Check for Updates</button>
+          <button type="button" data-cmd="close">Close Window</button>
+          <button type="button" data-cmd="hide">Hide Update<kbd>⌘H</kbd></button>
+        </div></span>
+      <span class="mtop" aria-hidden="true">Edit</span><span class="mtop" aria-hidden="true">Window</span><span class="mtop" aria-hidden="true">Help</span></span>
+    <span class="sp"></span>
+    <span class="st">
+      <span class="mwrap"><button type="button" class="mx" id="mx" aria-haspopup="true" aria-expanded="false" aria-controls="mx-list" aria-label="Update status"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13 8.2a5 5 0 1 1-1.5-3.6"/><path d="M12 1.8v3h-3"/></svg><span class="dot" id="mx-dot" hidden></span></button>
+        <div class="mlist right" id="mx-list" hidden role="group" aria-label="Update status menu"></div></span>
+      <svg class="opt wifi" id="wifi" viewBox="0 0 16 16" aria-hidden="true"><g class="waves"><path d="M1.5 6a9.5 9.5 0 0 1 13 0M3.8 8.6a6.2 6.2 0 0 1 8.4 0M6 11.1a3 3 0 0 1 4 0"/><circle cx="8" cy="13.3" r=".6" fill="#f5f5f7"/></g><path class="slash" d="M2.5 2.5l11 11"/></svg>
+      <svg class="opt" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 4.8l7 6.2L8 14V2l3.5 3L4.5 11.2"/></svg>
+      <svg viewBox="0 0 22 16" style="width:22px" aria-hidden="true"><rect x="1.5" y="4" width="17" height="8.5" rx="2"/><path d="M20.5 6.8v3"/><rect x="3.5" y="6" width="13" height="4.5" fill="#f5f5f7" stroke="none"/></svg>
+      <span class="clock" id="clock" aria-hidden="true"></span>
+    </span>
+  </div>
+
+  <div class="win" id="win">
+    <div class="titlebar">
+      <button type="button" class="wbtn mini" id="win-mini" tabindex="-1" aria-label="Miniaturize window"></button>
+      <div class="wtitle">Update</div>
+      <button type="button" class="wbtn close" id="win-close" tabindex="-1" aria-label="Close window"></button>
+    </div>
+    <div class="wbody" id="wbody">
+      <main id="view"></main>
+      <div class="sheetwrap" id="sheetwrap" hidden>
+        <div class="sheet" role="alertdialog" aria-modal="true" aria-labelledby="sheet-title" aria-describedby="sheet-text">
+          <span id="sheet-icon"></span>
+          <form id="sheet-form" style="flex:1;min-width:0" novalidate>
+            <h2 id="sheet-title"></h2>
+            <p id="sheet-text"></p>
+            <div id="sheet-auth" class="authf" hidden>
+              <label for="auth-name">Name:</label><input type="text" id="auth-name" autocomplete="username" spellcheck="false">
+              <label for="auth-pass">Password:</label><input type="password" id="auth-pass" autocomplete="current-password">
+              <span></span><span class="autherr" id="auth-err" role="alert"></span>
+            </div>
+            <div class="btns">
+              <button type="button" class="gel" id="sheet-cancel">Cancel</button>
+              <button type="submit" class="gel blue" id="sheet-ok">OK</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="statusbar">
+      <span id="status-msg" role="status"></span>
+      <span class="note">Simulator: versions, sizes and timings are sample data. Administrator authentication is simulated (any password works).</span>
+    </div>
+    <div class="resizebar" aria-hidden="true"><span></span><span class="mid"></span><span></span></div>
+  </div>
+  <p class="closedhint" id="closedhint" hidden>Update is closed. Open it from the Dock or the Update icon in the menu bar.</p>
+
+  <aside class="sim" id="sim" aria-label="Simulator controls">
+    <button type="button" class="simtog" id="simtog" aria-expanded="false" aria-controls="simbody"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 1l6 4-6 4z"/></svg>Simulator controls<span class="st" id="simstate"></span></button>
+    <div class="simbody" id="simbody" hidden>
+      <p>Not part of Update. These drive the mockup so you can replay the upgrade and try what goes wrong.</p>
+      <h4>Start from</h4>
+      <div class="simbtns">
+        <button type="button" class="gel small" data-reset="start">Up to date (before checking)</button>
+        <button type="button" class="gel small" data-reset="available">Update available</button>
+        <button type="button" class="gel small" data-reset="ready">Ready to install</button>
+      </div>
+      <h4><label for="sim-fail">Force a failure</label></h4>
+      <span class="popup"><select id="sim-fail">
+        <option value="none">None</option>
+        <option value="check">Checking: no network</option>
+        <option value="download">Downloading: connection lost</option>
+        <option value="verify">Installing: update fails verification</option>
+        <option value="pkgs">Installing: package error (NextBSD-mesa)</option>
+        <option value="loader">Installing: boot loader error</option>
+      </select></span>
+      <label class="chk"><input type="checkbox" class="cbx" id="sim-once" checked><span>Only once, so Retry then works</span></label>
+      <h4 id="sim-speed-l">Speed</h4>
+      <div class="seg2" role="radiogroup" aria-labelledby="sim-speed-l">
+        <label><input type="radio" name="sim-speed" value="1" checked><span>1×</span></label><label><input type="radio" name="sim-speed" value="5"><span>5×</span></label>
+      </div>
+      <div class="simbtns" id="sim-skipwrap" hidden><button type="button" class="gel small" id="sim-skip">Finish restart now</button></div>
+    </div>
+  </aside>
+
+  <div class="dock" id="dock"></div>
+</div>
+
+<div class="boot" id="boot" hidden role="dialog" aria-modal="true" aria-label="Restarting" tabindex="-1"><div class="bstage" id="bstage" aria-live="polite"></div></div>
+<div class="vh" id="live" aria-live="polite"></div>
+
+<script>
+(function(){
+"use strict";
+const ICON_WORKSPACE="data:image/png;base64,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", ICON_TERMINAL="data:image/png;base64,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";
+const OLD="27.0.0.178", NEW="27.0.0.185";
+// Download sizes are sample data. rs = needs a restart (kernel and kernel extensions).
+const PKGS=[
+  ["pkg","NextBSD package manager",9.1],
+  ["NextBSD-kernel","NextBSD kernel",38.2,1],
+  ["NextBSD-kernel-extensions","NextBSD kernel extensions",21.4,1],
+  ["NextBSD-kernel-extensions-graphics","NextBSD graphics kernel extensions",64.8,1],
+  ["NextBSD-kernel-extensions-nvidia","NextBSD NVIDIA graphics kernel extensions",112.5,1],
+  ["NextBSD-freebsd-compat","NextBSD base system",96.3],
+  ["NextBSD-userland","NextBSD Darwin userland",41.7],
+  ["NextBSD-contrib","NextBSD third-party base programs",18.9],
+  ["NextBSD-displayserver-support","NextBSD display server support libraries",7.6],
+  ["NextBSD-xlibs","NextBSD X11 client libraries",12.1],
+  ["NextBSD-mesa","NextBSD OpenGL, EGL and GBM (Mesa)",58.4],
+  ["NextBSD-mesa-x11","NextBSD Mesa X11 support",3.2],
+  ["NextBSD-xlibre","NextBSD X server (XLibre)",9.8],
+  ["NextBSD-gnustep-support","NextBSD GNUstep support libraries",14.6],
+  ["NextBSD-printing-support","NextBSD printing support (CUPS)",11.3],
+  ["NextBSD-toolchain","NextBSD developer toolchain",187.0],
+  ["NextBSD-bootloader","NextBSD boot loader",1.4],
+  ["NextBSD-everything","The complete NextBSD system",0.004]
+].map(([n,d,mb,rs])=>({n,d,mb,rs:!!rs}));
+const TOTAL=PKGS.reduce((a,p)=>a+p.mb,0);
+const MESA=PKGS.findIndex(p=>p.n==="NextBSD-mesa");
+const SECURITY=true;
+
+const $=s=>document.querySelector(s);
+const fmtMB=mb=>mb>=1000?(mb/1000).toFixed(2)+" GB":mb.toFixed(1)+" MB";
+const pkgSize=mb=>mb<1?Math.max(1,Math.round(mb*1000))+" KB":mb.toFixed(1)+" MB";
+const fmtTime=d=>d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"});
+function whenText(d){
+  if(!d)return "never";
+  const now=new Date(),day=x=>new Date(x.getFullYear(),x.getMonth(),x.getDate()).getTime();
+  const diff=(day(now)-day(d))/864e5;
+  if(diff===0)return (now-d<60000?"just now":"today at "+fmtTime(d));
+  if(diff===1)return "yesterday at "+fmtTime(d);
+  return d.toLocaleDateString(undefined,{day:"numeric",month:"short"})+" at "+fmtTime(d);
+}
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+function yesterday(){const d=new Date(Date.now()-864e5);d.setHours(9,41,0,0);return d}
+const dateShort=d=>(d||new Date()).toLocaleDateString(undefined,{weekday:"short",day:"numeric",month:"short"});
+
+/* ---------- state ---------- */
+// Update never checks, downloads or installs on its own: only when the user
+// asks. No Preferences; without ZFS there are no boot-environment backups.
+const P={be:false};
+const S={phase:"uptodate",prev:"uptodate",installed:OLD,lastChecked:yesterday(),justUpdated:false,noUpdates:false,backup:null,winOpen:true,
+  speed:1,fail:"none",failOnce:true,
+  dl:{bytes:0,rate:0,paused:false,auto:false},
+  inst:null,err:null,deferred:false,autoInstalled:false,installedAt:null,pendingBE:false,restarting:false,
+  open:{details:false,log:false}};
+
+/* ---------- simulated clock: every wait runs on sim time so 5x speeds everything ---------- */
+const CANCEL={cancelled:true};
+let waits=[],gen=0,simNow=0,lastTick=performance.now();
+function sleep(ms){const g=gen;return new Promise((res,rej)=>{waits.push({t:ms,res,rej,g})})}
+setInterval(()=>{
+  const now=performance.now(),dt=Math.min(2000,now-lastTick)*S.speed;lastTick=now;simNow+=dt;
+  const keep=[];for(const w of waits){if(w.g!==gen){w.rej(CANCEL);continue}w.t-=dt;if(w.t<=0)w.res();else keep.push(w)}waits=keep;
+},50);
+function cancelFlows(){gen++;const w=waits;waits=[];w.forEach(x=>x.rej(CANCEL))}
+function flow(p){p.catch(e=>{if(e!==CANCEL)console.error(e)})}
+async function during(ms,on){const t0=simNow;for(;;){await sleep(80);const f=Math.min(1,(simNow-t0)/ms);if(on)on(f);if(f>=1)return}}
+function consumeFail(kind){if(S.fail!==kind)return false;if(S.failOnce){S.fail="none";syncSim()}return true}
+
+/* ---------- icons ---------- */
+function updateIcon(size,cls){
+  return '<svg class="ico'+(cls?' '+cls:'')+'" width="'+size+'" height="'+size+'" viewBox="0 0 64 64" aria-hidden="true" focusable="false">'+
+   '<rect x="3" y="3" width="58" height="58" rx="12" fill="#26262d" stroke="#55555f" stroke-width="1.5"/>'+
+   '<g fill="none" stroke-linecap="round" stroke-linejoin="round">'+
+   '<g transform="translate(14 3.5) scale(1.5)" stroke="#00d4ff" stroke-width="2.1"><path d="M19 12a7 7 0 1 1-2.1-5"/><path d="M17.5 3.5v4h-4"/></g>'+
+   '<rect x="13" y="40" width="38" height="13" rx="3" stroke="#f5f5f7" stroke-width="2.2"/><path d="M18.5 46.5h13" stroke="#f5f5f7" stroke-width="2.2"/>'+
+   '</g><circle cx="45" cy="46.5" r="1.8" fill="#f5f5f7"/></svg>';
+}
+function lockTile(size){
+  return '<svg class="ico" width="'+size+'" height="'+size+'" viewBox="0 0 64 64" aria-hidden="true"><rect x="2" y="2" width="60" height="60" rx="13" fill="hsl(45,30%,30%)" stroke="hsl(45,30%,42%)" stroke-width="1.5"/><g transform="translate(14 14) scale(1.5)" fill="none" stroke="#f5f5f7" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="10" rx="1.6"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/><circle fill="#f5f5f7" stroke="none" cx="12" cy="15.3" r="1.5"/></g></svg>';
+}
+const CORNER={
+  ok:'<svg class="corner" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="#1d3a26" stroke="#6fd38a" stroke-width="1.5"/><path d="M7.5 12.3l3 3 6-6.3" fill="none" stroke="#6fd38a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  warn:'<svg class="corner" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l10 18H2z" fill="#3b2a12" stroke="#ffb454" stroke-width="1.5" stroke-linejoin="round"/><path d="M12 9v5.5" stroke="#ffb454" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="17.6" r="1.3" fill="#ffb454"/></svg>',
+  restart:'<svg class="corner" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="#0d2f5c" stroke="#5fb4ff" stroke-width="1.5"/><path d="M16.5 12.2a4.6 4.6 0 1 1-1.4-3.3M15.6 6.2v2.9h-2.9" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+};
+const SVG={
+  shield:'<svg viewBox="0 0 24 24"><path d="M12 3l7.5 3v5.5c0 4.6-3.2 8.3-7.5 9.5-4.3-1.2-7.5-4.9-7.5-9.5V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg>',
+  warn:'<svg viewBox="0 0 24 24"><path d="M12 3.5l9 16H3z"/><path d="M12 10v4.5M12 17.2v.1"/></svg>',
+  err:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg>',
+  info:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.6v.1"/></svg>',
+  ok:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.3l2.8 2.8 5.2-5.6"/></svg>',
+  bag:'<svg viewBox="0 0 24 24"><path d="M5 8h14l-1.2 12H6.2z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/></svg>',
+  tri:'<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 1l6 4-6 4z"/></svg>',
+  restartSm:'<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M9.6 6.2a3.6 3.6 0 1 1-1.1-2.6M9 1.8v2.2H6.8"/></svg>',
+  lockC:'<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7.5" rx="1.2" fill="#b8b8c0"/><path d="M5 7V5a3 3 0 0 1 6 0v2" fill="none" stroke="#b8b8c0" stroke-width="1.6"/></svg>',
+  lockO:'<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7.5" rx="1.2" fill="#b8b8c0"/><path d="M5 7V5a3 3 0 0 1 5.8-1" fill="none" stroke="#b8b8c0" stroke-width="1.6" stroke-linecap="round"/></svg>'
+};
+function callout(kind,html){return '<div class="callout '+kind+'">'+SVG[kind==="ok"&&html.indexOf("backup")>=0?"shield":kind]+'<div>'+html+'</div></div>'}
+
+/* ---------- content ---------- */
+function disc(id,label,count,body){
+  const open=S.open[id];
+  return '<div class="disc"><button type="button" class="dbtn" data-disc="'+id+'" aria-expanded="'+open+'" aria-controls="d-'+id+'">'+SVG.tri+label+(count?' <span class="n">'+count+'</span>':'')+'</button><div class="dbody" id="d-'+id+'"'+(open?'':' hidden')+'>'+body+'</div></div>';
+}
+// Every update rebuilds and replaces all of NextBSD's packages, so there's no
+// package list to show: just the version and its size.
+function releaseSection(){
+  return "";
+}
+const swNote=()=>'<p class="muted" style="font-size:11.5px;margin:18px 0 0">Apps you installed from Software are updated in Software. <button type="button" class="linkbtn" data-cmd="software">Open Software</button></p>';
+function head(o){
+  return '<div class="uhead"><span class="uicon">'+updateIcon(64,"big")+(o.corner?CORNER[o.corner]:'')+'</span><div class="uh"><h1 id="vh1" tabindex="-1">'+o.title+'</h1>'+(o.sub?'<p class="sub">'+o.sub+'</p>':'')+(o.more||'')+'</div></div>';
+}
+const btn=(id,label,o)=>'<button type="button" class="gel'+(o&&o.primary?' blue big':'')+'" id="'+id+'"'+(o&&o.primary?' data-primary':'')+(o&&o.disabled?' disabled':'')+'>'+label+'</button>';
+const chips=()=>'<ul class="chips" aria-label="About this update"><li>Download <b class="mono">'+fmtMB(TOTAL)+'</b></li>'+'</ul>';
+
+/* ---------- views ---------- */
+const VIEW={
+  uptodate(){
+    /* Update only checks when asked, so it says nothing about being current
+       until a check has run. */
+    const sub=S.justUpdated?"Updated successfully.":S.noUpdates?"No updates available.":"";
+    return head({corner:S.justUpdated?"ok":"",title:"NextBSD "+S.installed,sub,
+      more:'<div class="acts">'+btn("b-check","Check for Updates",{primary:true})+'</div>'});
+  },
+  checking(){
+    return head({title:"Checking for updates…",sub:"Asking the NextBSD package repository what’s new.",
+      more:'<div class="dlbox"><div class="prog wide ind" role="progressbar" aria-label="Checking for updates"><div class="bar"></div></div></div><div class="acts">'+btn("b-stop-check","Stop")+'</div>'});
+  },
+  checkfail(){
+    return head({corner:"warn",title:"Can’t check for updates",sub:"Update couldn’t reach the NextBSD package repository.",
+      more:'<div class="acts">'+btn("b-check","Try Again",{primary:true})+'</div>'})+
+      callout("err",'<p>Your computer doesn’t seem to be connected to the internet.</p><p class="muted" style="font-size:11.5px">Check your Wi-Fi or Ethernet connection, then try again. Nothing was changed.</p>');
+  },
+  available(){
+    return head({title:"NextBSD "+NEW,sub:"An update for NextBSD is available. You have NextBSD "+S.installed+".",more:chips()+'<div class="acts">'+btn("b-download","Download",{primary:true})+'</div>'})+releaseSection();
+  },
+  downloading(){
+    const d=S.dl;
+    return head({title:"NextBSD "+NEW,sub:d.auto?"Downloading automatically. You can keep working.":"Downloading. You can keep working.",
+      more:'<div class="dlbox"><div class="prog wide" id="dlprog" role="progressbar" aria-label="Download progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="bar" id="dlbar"></div></div><div class="progline"><span id="dltext"></span><span id="dlrate" class="mono"></span></div></div>'+
+      '<div class="acts">'+btn("b-cancel-dl","Cancel")+'</div>'})+releaseSection();
+  },
+  dlfail(){
+    return head({corner:"warn",title:"The download stopped",sub:"NextBSD "+NEW+" · "+fmtMB(S.dl.bytes)+" of "+fmtMB(TOTAL)+" downloaded",
+      more:'<div class="dlbox"><div class="prog wide" role="progressbar" aria-label="Download progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+Math.round(S.dl.bytes/TOTAL*100)+'"><div class="bar" style="width:'+(S.dl.bytes/TOTAL*100)+'%;background:#6b5a3a"></div></div></div>'+
+      '<div class="acts">'+btn("b-cancel-dl","Cancel")+btn("b-retry","Retry",{primary:true})+'</div>'})+
+      callout("err",'<p>The connection to the package repository was lost.</p><p class="muted" style="font-size:11.5px">What was downloaded is kept, so Retry continues where it stopped. Nothing was installed.</p>')+releaseSection();
+  },
+  ready(){
+    return head({title:"NextBSD "+NEW+" is ready to install",sub:"Installing takes a few minutes. Your computer needs to restart when it’s done.",more:chips()+'<div class="acts">'+btn("b-install","Install Now…",{primary:true})+'</div>'})+
+      releaseSection();
+  },
+  installing(){
+    const I=S.inst;
+    return head({title:"Installing NextBSD "+NEW+"…",sub:I.be?"Installing into a new boot environment. You can keep working; nothing changes until you restart.":"Installing over the running system. Don’t turn off your computer.",
+      more:'<div class="dlbox"><div class="prog wide" id="inprog" role="progressbar" aria-label="Installation progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="bar" id="inbar"></div></div><div class="progline"><span id="intext"></span><span id="inpct" class="mono"></span></div></div>'+
+      (I.be?'<div class="acts" id="stopwrap">'+btn("b-stop-inst","Stop")+'<span class="muted" style="font-size:11.5px">Stopping removes the incomplete copy. Your system isn’t changed.</span></div>':'')})+
+      '';
+  },
+  installfail(){
+    const E=S.err;let body;
+    const failedAt=E.step==="verify"?"while verifying the update":E.step==="pkgs"?"while installing "+PKGS[MESA].n:"while updating the boot loader";
+    if(!E.changed){
+      body=callout("ok",'<p class="t">Your system was not changed.</p><p class="muted" style="font-size:11.5px">'+
+        (E.step==="verify"?"The downloaded update didn’t pass verification, so Update didn’t install anything. Download it again to try once more.":
+         "Update stopped "+failedAt+" and removed the incomplete boot environment. You’re still using NextBSD "+S.installed+", exactly as before.")+'</p>');
+    }else{
+      body=callout("err",'<p class="t">NextBSD is only partly updated.</p><p class="muted" style="font-size:11.5px">Update stopped '+failedAt+'. '+
+        (E.step==="pkgs"?E.done+" of "+PKGS.length+" packages were already updated":"All packages were updated, but the boot loader wasn’t")+
+        ', and without a backup they can’t be undone. Try again to finish the update. Until then, some apps may not work correctly.</p>');
+    }
+    const again=E.step==="verify"?btn("b-redownload","Download Again",{primary:true}):btn("b-retry-inst","Try Again…",{primary:true});
+    return head({corner:"warn",title:"The update couldn’t be installed",sub:"NextBSD "+NEW+" · stopped "+failedAt,more:'<div class="acts">'+again+'</div>'})+body;
+  },
+  restart(){
+    const be=S.pendingBE;
+    if(!S.deferred){
+      return head({corner:"restart",title:"Restart required",sub:"NextBSD "+NEW+" is installed. Restart your computer to start using it.",
+        more:'<div class="acts">'+btn("b-later","Later")+btn("b-restart","Restart Now",{primary:true})+'</div>'})+
+        (be?callout("ok",'<p>Your current system is kept as a backup you can return to.</p><p class="muted" style="font-size:11.5px">After restart, NextBSD '+OLD+' stays in the startup menu, in case something goes wrong.</p>')
+           :callout("info",'<p>Save your work in other apps before you restart.</p>'));
+    }
+    return head({corner:"restart",title:"Restart to finish updating",sub:(S.autoInstalled?"NextBSD "+NEW+" was downloaded and installed automatically. ":"NextBSD "+NEW+" is installed. ")+"It starts the next time you restart.",
+      more:'<div class="acts">'+btn("b-restart-ask","Restart…",{primary:true})+'</div>'})+
+      callout("info",'<p>You’re still using NextBSD '+OLD+' until you restart.</p><p class="muted" style="font-size:11.5px">'+(be?"The update is waiting in a new boot environment; your current system stays as a backup.":"Some apps may behave oddly until you restart, because parts of the system were replaced while running.")+'</p>');
+  },
+  backupboot(){
+    return head({corner:"warn",title:"You started up from your backup",sub:"This is NextBSD "+OLD+", the system kept when you updated. NextBSD "+NEW+" is still installed.",
+      more:'<div class="acts">'+btn("b-restart-new","Restart into NextBSD "+NEW+"…",{primary:true})+'</div>'})+
+      callout("info",'<p>Update won’t offer '+NEW+' again while you’re using the backup.</p><p class="muted" style="font-size:11.5px">To keep using this system for good, make it the default in BootEnvironments. <button type="button" class="linkbtn" data-cmd="bootenv">Open BootEnvironments</button></p>');
+  }
+};
+
+/* ---------- rendering ---------- */
+let live=$("#live");
+function announce(t){live.textContent="";setTimeout(()=>{live.textContent=t},30)}
+let statusTimer;
+function status(msg){const el=$("#status-msg");el.textContent=msg||"";clearTimeout(statusTimer);if(msg)statusTimer=setTimeout(()=>{el.textContent=""},6000)}
+const ANN={uptodate:()=>S.justUpdated?"NextBSD "+NEW+" updated successfully.":S.noUpdates?"No updates available.":"NextBSD "+S.installed+".",checking:()=>"Checking for updates.",checkfail:()=>"Can't check for updates. No network connection.",
+  available:()=>"NextBSD "+NEW+" is available.",downloading:()=>"Downloading.",dlfail:()=>"The download stopped.",ready:()=>"NextBSD "+NEW+" is ready to install.",
+  installing:()=>"Installing.",installfail:()=>"The update couldn't be installed.",restart:()=>S.deferred?"Restart to finish updating.":"Restart required.",backupboot:()=>"You started up from your backup."};
+
+function setPhase(p,opt){
+  const ae=document.activeElement;
+  const moveFocus=!(opt&&opt.keepFocus)&&$("#sheetwrap").hidden&&$("#boot").hidden&&(!ae||ae===document.body||$("#win").contains(ae));
+  if(p!==S.phase)status("");
+  S.prev=S.phase;S.phase=p;render();announce(ANN[p]());
+  if(moveFocus&&S.winOpen){const t=$("#view [data-primary]")||$("#vh1");if(t)t.focus({preventScroll:true})}
+}
+function render(){
+  $("#win").hidden=!S.winOpen;$("#closedhint").hidden=S.winOpen||S.restarting;
+  if(S.winOpen){
+    $("#view").innerHTML=VIEW[S.phase]();
+    if(S.phase==="downloading")updateDl();
+    if(S.phase==="installing"){refreshSteps();updateInstall()}
+    if(S.phase==="installing"||S.phase==="installfail")renderLog();
+  }
+  renderExtras();syncSim();
+}
+
+/* Dock, menu-bar extra */
+function attention(){
+  const p=S.phase;
+  if(p==="available"||p==="ready")return {badge:"1",dot:"on",head:p==="ready"?"NextBSD "+NEW+" is ready to install":"NextBSD "+NEW+" is available"};
+  if(p==="checkfail"||p==="dlfail"||p==="installfail")return {badge:"!",dot:"warn",head:p==="checkfail"?"Can’t check for updates":p==="dlfail"?"The download stopped":"The update couldn’t be installed"};
+  if(p==="restart")return {badge:"restart",dot:"on",head:"Restart to finish updating"};
+  if(p==="downloading")return {prog:S.dl.bytes/TOTAL,head:(S.dl.paused?"Download paused · ":"Downloading NextBSD "+NEW+" · ")+Math.floor(S.dl.bytes/TOTAL*100)+"%"};
+  if(p==="installing")return {prog:S.inst?S.inst.pct:0,head:"Installing NextBSD "+NEW+" · "+Math.floor((S.inst?S.inst.pct:0)*100)+"%"};
+  if(p==="checking")return {head:"Checking for updates…",busy:true};
+  if(p==="backupboot")return {head:"Using backup system NextBSD "+OLD,dot:"warn",badge:"!"};
+  return {head:S.noUpdates?"No updates available":"NextBSD "+S.installed};
+}
+function renderExtras(){
+  const a=attention();
+  const dot=$("#mx-dot");dot.hidden=!a.dot;dot.className="dot"+(a.dot==="warn"?" warn":"");
+  $("#mx").classList.toggle("busy",!!a.busy||a.prog!=null);
+  $("#mx").setAttribute("aria-label","Update: "+a.head.replace(/’/g,"'"));
+  const t=$("#dock-update");
+  if(t){
+    let extra="";
+    if(a.prog!=null)extra='<span class="dprog"><i id="dock-bar" style="width:'+(a.prog*100)+'%"></i></span>';
+    else if(a.badge==="restart")extra='<span class="dbadge" title="Restart to finish updating">'+SVG.restartSm+'</span>';
+    else if(a.badge)extra='<span class="dbadge'+(a.badge==="!"?" warn":"")+'">'+a.badge+'</span>';
+    t.innerHTML=updateIcon(44)+extra;t.classList.toggle("on",true);
+  }
+  $("#wifi").classList.toggle("off",S.fail==="check"||S.phase==="checkfail");
+  if(!$("#mx-list").hidden)fillMx();
+}
+function updateExtrasProgress(){
+  const a=attention(),b=$("#dock-bar");
+  if(b&&a.prog!=null)b.style.width=(a.prog*100)+"%";
+  else if(a.prog!=null)renderExtras();
+  const h=$("#mx-list .mhead b");if(h)h.textContent=a.head;
+}
+function fillMx(){
+  const a=attention(),p=S.phase;let items="";
+  if(p==="ready")items+='<button type="button" data-cmd="install">Install Now…</button>';
+  if(p==="available")items+='<button type="button" data-cmd="download">Download</button>';
+  if(p==="restart")items+='<button type="button" data-cmd="restart-ask">Restart…</button>';
+  if(p==="uptodate"||p==="checkfail")items+='<button type="button" data-cmd="check">Check for Updates</button>';
+  items+='<button type="button" data-cmd="open">Open Update…</button>';
+  $("#mx-list").innerHTML='<div class="mhead"><b>'+a.head+'</b>NextBSD '+S.installed+'</div>'+items;
+}
+
+/* ---------- check ---------- */
+async function runCheck(){
+  setPhase("checking");
+  await sleep(2600);
+  if(consumeFail("check")){setPhase("checkfail");return}
+  S.lastChecked=new Date();
+  if(S.installed===NEW){S.justUpdated=false;S.noUpdates=true;setPhase("uptodate");return}
+  foundUpdate(false);
+}
+function foundUpdate(background){
+  S.dl={bytes:0,rate:0,paused:false,auto:false};
+  setPhase("available",{keepFocus:background});
+}
+
+/* ---------- download ---------- */
+function remain(sec){
+  if(!isFinite(sec)||sec<=0)return "Calculating time remaining…";
+  if(sec<10)return "a few seconds remaining";
+  if(sec<60)return "about "+Math.ceil(sec/5)*5+" seconds remaining";
+  const m=Math.round(sec/60);return "about "+m+" minute"+(m>1?"s":"")+" remaining";
+}
+function updateDl(){
+  const d=S.dl,pct=d.bytes/TOTAL*100;
+  const bar=$("#dlbar");
+  if(bar){bar.style.width=Math.max(1,pct)+"%";$("#dlprog").setAttribute("aria-valuenow",Math.floor(pct));
+    $("#dltext").textContent=fmtMB(d.bytes)+" of "+fmtMB(TOTAL)+" · "+(d.paused?"Paused":remain((TOTAL-d.bytes)/d.rate));
+    $("#dlrate").textContent=d.paused?"":d.rate.toFixed(1)+" MB/s";}
+  updateExtrasProgress();
+}
+async function runDownload(auto){
+  S.dl.paused=false;S.dl.auto=auto;S.dl.rate=0;
+  setPhase("downloading",{keepFocus:auto});
+  const failAt=S.fail==="download"?S.dl.bytes+(TOTAL-S.dl.bytes)*0.42:Infinity;
+  let warm=0;
+  while(S.dl.bytes<TOTAL){
+    const t0=simNow;await sleep(100);const dt=(simNow-t0)/1000;
+    if(S.dl.paused){S.dl.rate=0;updateDl();continue}
+    warm=Math.min(1,warm+dt/1.5);
+    const target=(30+8*Math.sin(simNow/2300)+4*Math.sin(simNow/610))*(0.3+0.7*warm);
+    S.dl.rate=S.dl.rate?S.dl.rate*0.8+target*0.2:target;
+    S.dl.bytes=Math.min(TOTAL,S.dl.bytes+S.dl.rate*dt);
+    if(S.dl.bytes>=failAt&&consumeFail("download")){S.dl.bytes=failAt;setPhase("dlfail",{keepFocus:auto});return}
+    updateDl();
+  }
+  setPhase("ready",{keepFocus:auto});
+  status("NextBSD "+NEW+" is downloaded and ready to install.");
+}
+
+/* ---------- install ---------- */
+const pkgMs=p=>600+p.mb*25;
+function log(line,cls){if(!S.inst)return;S.inst.log.push({t:line,c:cls||""});const el=$("#log");if(el){const d=document.createElement("div");d.textContent=line;if(cls)d.className=cls;el.appendChild(d);el.scrollTop=el.scrollHeight}}
+function renderLog(){const el=$("#log");if(!el||!S.inst)return;el.innerHTML="";S.inst.log.forEach(l=>{const d=document.createElement("div");d.textContent=l.t;if(l.c)d.className=l.c;el.appendChild(d)});el.scrollTop=el.scrollHeight}
+function refreshSteps(){
+  const el=$("#steps");if(!el||!S.inst)return;
+  const I=S.inst;
+  el.innerHTML=I.steps.map(s=>'<li class="'+s.st+'"><span class="g" aria-hidden="true"></span><span>'+s.label+
+    '<span class="vh"> — '+({todo:"waiting",doing:"in progress",done:"done",fail:"failed",stop:"stopped"}[s.st])+'</span>'+
+    (s.st==="doing"?'<span class="sd" id="stepsub">'+(s.sub||"")+'</span>':'')+'</span></li>').join("");
+  const sw=$("#stopwrap");
+  if(sw){const can=I.be&&!I.rolling&&["space","be","verify","pkgs"].includes(I.steps[I.cur].id);
+    if(!can&&sw.contains(document.activeElement))$("#vh1").focus({preventScroll:true});
+    sw.hidden=!can;}
+}
+function updateInstall(){
+  const I=S.inst;if(!I)return;
+  const bar=$("#inbar");
+  if(bar){bar.style.width=Math.max(1,I.pct*100)+"%";$("#inprog").setAttribute("aria-valuenow",Math.floor(I.pct*100));
+    const s=I.steps[I.cur];$("#intext").textContent=I.rolling?"Undoing…":s.label+(s.sub&&s.id==="pkgs"?" · "+s.sub:"")+"…";$("#inpct").textContent=Math.floor(I.pct*100)+"%";
+    const sub=$("#stepsub");if(sub&&s.sub!=null)sub.textContent=s.sub;}
+  updateExtrasProgress();
+}
+function failErr(step,msg){return {fail:true,step,msg}}
+async function seg(st,pr,a,b){await during(st.ms*(b-a),f=>pr(a+f*(b-a)))}
+const STEP={
+  async space(st,pr){log("Checking free space on zroot… 182 GB available, 2.4 GB needed");await seg(st,pr,0,1)},
+  async be(st,pr){st.sub="bectl create "+NEW;updateInstall();log("bectl create -e "+OLD+" "+NEW);await seg(st,pr,0,.55);
+    st.sub="bectl mount "+NEW;updateInstall();log("bectl mount "+NEW+" /var/run/update/"+NEW);await seg(st,pr,.55,1)},
+  async verify(st,pr){log("Verifying signatures of "+PKGS.length+" packages…");
+    for(let i=0;i<PKGS.length;i++){st.sub=PKGS[i].n;updateInstall();await seg(st,pr,i/PKGS.length,(i+.5)/PKGS.length);
+      if(i===MESA&&consumeFail("verify"))throw failErr("verify",PKGS[i].n+"-"+NEW+".pkg: signature does not match");
+      await seg(st,pr,(i+.5)/PKGS.length,(i+1)/PKGS.length)}
+    log("All signatures are valid.")},
+  async pkgs(st,pr){
+    const I=S.inst,root=I.be?" -r /var/run/update/"+NEW:"";let acc=0;
+    if(I.be)log("pkg"+root+" upgrade (installing into boot environment "+NEW+")");
+    for(let i=0;i<PKGS.length;i++){
+      const p=PKGS[i],ms=pkgMs(p);
+      st.sub=(i+1)+" of "+PKGS.length+" · "+p.n;updateInstall();
+      log("["+(i+1)+"/"+PKGS.length+"] Upgrading "+p.n+" from "+OLD+" to "+NEW+"…");
+      const a=acc/st.ms,b=(acc+ms)/st.ms;
+      await during(ms*.5,f=>pr(a+(b-a)*f*.5));
+      if(i===MESA&&consumeFail("pkgs"))throw failErr("pkgs","pkg: "+p.n+"-"+NEW+": extracting /usr/local/lib/libGL.so.1: Input/output error");
+      await during(ms*.5,f=>pr(a+(b-a)*(.5+f*.5)));
+      log("["+(i+1)+"/"+PKGS.length+"] Extracting "+p.n+"-"+NEW+": done");
+      I.done=i+1;acc+=ms;
+    }},
+  async loader(st,pr){const I=S.inst;
+    st.sub="Writing loader.efi to the EFI system partition";updateInstall();log("Installing loader.efi"+(I.be?" from boot environment "+NEW:"")+" to the EFI system partition");
+    await seg(st,pr,0,.5);
+    if(consumeFail("loader"))throw failErr("loader","efibootmgr: unable to write the EFI system partition: Device busy");
+    if(I.be){st.sub="bectl activate "+NEW;updateInstall();log("bectl activate "+NEW+" (start "+NEW+" next time)")}
+    await seg(st,pr,.5,1)},
+  async finish(st,pr){const I=S.inst;st.sub="";log("Cleaning up downloaded packages");if(I.be)log("bectl umount "+NEW);await seg(st,pr,0,1);log("Done. Restart to start NextBSD "+NEW+".")}
+};
+async function runInstall(auto){
+  const be=P.be;
+  const steps=[{id:"space",label:"Checking free space",ms:1000}];
+  if(be)steps.push({id:"be",label:"Copying the system into a new boot environment",ms:2200});
+  steps.push({id:"verify",label:"Verifying the update",ms:2600},
+    {id:"pkgs",label:"Installing "+PKGS.length+" packages",ms:PKGS.reduce((a,p)=>a+pkgMs(p),0)},
+    {id:"loader",label:"Updating the boot loader",ms:2400},
+    {id:"finish",label:"Finishing up",ms:1400});
+  steps.forEach(s=>{s.st="todo";s.sub=""});
+  S.inst={be,auto,steps,cur:0,pct:0,log:[],done:0,rolling:false};
+  const total=steps.reduce((a,s)=>a+s.ms,0);let doneMs=0;
+  setPhase("installing",{keepFocus:auto});
+  log("Update "+OLD+" → "+NEW+(be?" (new boot environment)":" (in place)"));
+  try{
+    for(let i=0;i<steps.length;i++){
+      const st=steps[i];S.inst.cur=i;st.st="doing";refreshSteps();updateInstall();
+      await STEP[st.id](st,f=>{S.inst.pct=(doneMs+f*st.ms)/total;updateInstall()});
+      doneMs+=st.ms;st.st="done";refreshSteps();
+    }
+  }catch(e){
+    if(e===CANCEL)throw e;
+    if(!e.fail)throw e;
+    steps[S.inst.cur].st="fail";log(e.msg,"e");refreshSteps();
+    await installFailed(e);
+    return;
+  }
+  S.installedAt=new Date();S.pendingBE=be;S.deferred=!!auto;S.autoInstalled=!!auto;
+  setPhase("restart",{keepFocus:auto});
+  if(auto)status("NextBSD "+NEW+" was installed automatically. Restart to finish.");
+}
+async function rollback(){
+  const I=S.inst;I.rolling=true;
+  I.steps.push({id:"rollback",label:"Removing the incomplete boot environment",ms:1600,st:"doing",sub:"bectl destroy -F "+NEW});
+  I.cur=I.steps.length-1;refreshSteps();updateInstall();
+  log("bectl umount "+NEW+"; bectl destroy -F "+NEW);
+  const p0=I.pct;await during(1600,f=>{I.pct=p0*(1-f);updateInstall()});
+  I.steps[I.cur].st="done";log("Boot environment "+NEW+" removed. The running system was not touched.");
+}
+async function installFailed(e){
+  const I=S.inst;
+  const bi=I.steps.findIndex(s=>s.id==="be");
+  if(bi>=0&&I.cur>=bi)await rollback();
+  S.err={step:e.step,msg:e.msg,changed:!I.be&&(e.step==="pkgs"||e.step==="loader"),done:I.done};
+  setPhase("installfail");
+}
+async function stopInstall(){
+  const I=S.inst;if(!I||!I.be)return;
+  cancelFlows();
+  I.steps[I.cur].st="stop";log("Stopped by the user.");
+  const bi=I.steps.findIndex(s=>s.id==="be");
+  if(bi>=0&&I.cur>=bi)await rollback();
+  setPhase("ready");status("Installation stopped. Your system was not changed.");
+}
+
+/* ---------- restart ---------- */
+function stage(h){$("#bstage").innerHTML=h}
+let L=null;
+function loaderChoose(entries){
+  return new Promise((resolve,reject)=>{
+    L={entries,sel:0,n:5,stopped:false,done:false,resolve};
+    drawLoader();
+    (async()=>{try{while(!L.done){await sleep(1000);if(L.done)return;if(!L.stopped){L.n--;drawCount();if(L.n<=0){L.done=true;resolve(L.sel);return}}}}catch(e){reject(e)}})();
+  });
+}
+function drawLoader(){
+  stage('<div class="loader"><h2>NextBSD boot loader</h2><div class="rule"></div><p style="margin:0 0 8px">Choose a system to start:</p>'+
+   '<ul role="listbox" aria-label="Systems" id="ldr">'+L.entries.map((e,i)=>'<li><button type="button" role="option" data-ldr="'+i+'" aria-selected="'+(i===L.sel)+'" tabindex="'+(i===L.sel?0:-1)+'"><span>'+e.label+'</span><span class="nt">'+e.note+'</span></button></li>').join("")+'</ul>'+
+   '<p class="cd" id="ldr-cd"></p><p class="keys">'+(L.entries.length>1?"↑ ↓ choose · Return starts the selected system":"Return starts now")+'</p></div>');
+  drawCount();
+  const b=$('[data-ldr="'+L.sel+'"]');if(b)b.focus({preventScroll:true});
+}
+function drawCount(){const c=$("#ldr-cd");if(c)c.textContent=L.stopped?"Automatic start stopped.":"Starting "+L.entries[L.sel].label+" in "+L.n+" second"+(L.n===1?"":"s")+"…"}
+function loaderKey(e){
+  if(!L||L.done)return;
+  if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();L.stopped=true;L.sel=(L.sel+(e.key==="ArrowDown"?1:-1)+L.entries.length)%L.entries.length;drawLoader()}
+  else if(e.key==="Enter"||e.key===" "){e.preventDefault();L.done=true;L.resolve(L.sel)}
+  else if(e.key!=="Tab"&&e.key!=="Shift"){L.stopped=true;drawCount()}
+}
+async function runRestart(){
+  closeMenus();
+  S.restarting=true;syncSim();
+  const boot=$("#boot");boot.className="boot";boot.hidden=false;stage("");void boot.offsetWidth;
+  boot.classList.add("dim");boot.focus({preventScroll:true});
+  stage('<div><div class="bspin"></div><p class="bmsg">Quitting apps…</p></div>');await sleep(1500);
+  boot.classList.add("black");stage('<div><div class="bspin"></div><p class="bmsg">Restarting…</p></div>');await sleep(2400);
+  stage("");await sleep(700);
+  const entries=S.pendingBE?[{v:NEW,label:"NextBSD "+NEW,note:"new · default"},{v:OLD,label:"NextBSD "+OLD,note:"backup from "+dateShort(S.installedAt)}]:[{v:NEW,label:"NextBSD "+NEW,note:"default"}];
+  const pick=entries.length>1?await loaderChoose(entries):0;L=null;
+  const v=entries[pick].v;
+  stage('<div class="splash"><div class="wordmark">Next<span>BSD</span></div><div class="prog" role="progressbar" aria-label="Starting up" aria-valuemin="0" aria-valuemax="100"><div class="bar" id="spbar"></div></div><p class="bmsg" id="spmsg"></p></div>');
+  const msgs=v===NEW&&S.phase!=="backupboot"?[[0,"Starting NextBSD "+v],[.3,"Finishing the update…"],[.65,"Starting WindowServer"],[.9,"Logging in"]]:[[0,"Starting NextBSD "+v],[.6,"Starting WindowServer"],[.9,"Logging in"]];
+  await during(6500,f=>{const b=$("#spbar");if(b){b.style.width=(f*100)+"%";b.parentNode.setAttribute("aria-valuenow",Math.floor(f*100))}
+    const m=$("#spmsg");if(m){let t="";msgs.forEach(x=>{if(f>=x[0])t=x[1]});if(m.textContent!==t)m.textContent=t}});
+  await finishBoot(v);
+}
+async function finishBoot(v){
+  L=null;S.restarting=false;S.winOpen=true;
+  if(v===NEW){S.installed=NEW;S.justUpdated=true;S.noUpdates=false;S.backup=S.pendingBE?OLD:null;S.deferred=false;S.lastChecked=new Date()}
+  else{S.installed=OLD}
+  const boot=$("#boot");
+  setPhase(v===NEW?"uptodate":"backupboot",{keepFocus:true});
+  boot.classList.add("out");
+  await sleep(700);
+  boot.hidden=true;boot.className="boot";stage("");
+  const h=$("#vh1");if(h)h.focus({preventScroll:true});
+  status(v===NEW?"Welcome back. NextBSD "+NEW+" is installed.":"Started up from the backup, NextBSD "+OLD+".");
+}
+function confirmRestart(){
+  openSheet({title:"Restart now?",text:"Open apps will quit. Make sure your work is saved.",ok:"Restart",icon:updateIcon(48),onOk:()=>flow(runRestart())});
+}
+
+/* ---------- sheet (authentication + confirm) ---------- */
+let sheet=null;
+function openSheet(o){
+  const wrap=$("#sheetwrap");
+  (o.container||$("#wbody")).appendChild(wrap);
+  sheet={...o,ret:document.activeElement};
+  $("#sheet-icon").innerHTML=o.auth?lockTile(48):(o.icon||"");
+  $("#sheet-title").textContent=o.title;
+  $("#sheet-text").textContent=o.text;
+  $("#sheet-auth").hidden=!o.auth;
+  $("#auth-err").textContent="";
+  $("#auth-name").value="admin";$("#auth-pass").value="";
+  $("#sheet-ok").textContent=o.ok||"OK";
+  wrap.hidden=false;
+  (o.auth?$("#auth-pass"):$("#sheet-ok")).focus({preventScroll:true});
+  if(!o.container){const w=$("#win").getBoundingClientRect();if(w.top<0)$("#win").scrollIntoView({block:"start"})}
+}
+function closeSheet(restore){const r=sheet&&sheet.ret;$("#sheetwrap").hidden=true;sheet=null;if(restore!==false&&r&&document.contains(r))r.focus()}
+function cancelSheet(){if(!sheet)return;const f=sheet.onCancel;closeSheet();if(f)f()}
+$("#sheet-cancel").onclick=cancelSheet;
+$("#sheet-form").addEventListener("submit",e=>{
+  e.preventDefault();if(!sheet)return;
+  if(sheet.auth&&(!$("#auth-name").value.trim()||!$("#auth-pass").value)){
+    $("#auth-err").textContent="The name or password is incorrect.";$("#auth-pass").value="";$("#auth-pass").focus();
+    const p=$(".sheet");p.classList.remove("shake");void p.offsetWidth;p.classList.add("shake");return}
+  const f=sheet.onOk;closeSheet(false);f();
+});
+$("#sheetwrap").addEventListener("keydown",e=>{
+  if(e.key==="Escape"){e.preventDefault();e.stopPropagation();cancelSheet()}
+  if(e.key==="Tab"){const b=[...document.querySelectorAll("#sheetwrap input,#sheetwrap button")].filter(x=>x.offsetParent);const i=b.indexOf(document.activeElement);e.preventDefault();b[(i+(e.shiftKey?-1:1)+b.length)%b.length].focus()}
+});
+const AUTH_TEXT="Update wants to make changes. Enter an administrator’s name and password to allow this.";
+function askInstall(){
+  if(S.phase!=="ready")return;
+  openSheet({auth:true,title:"Authenticate",text:AUTH_TEXT,ok:"OK",
+    onOk:()=>flow(runInstall(false)),
+    onCancel:()=>{status("Installation cancelled. Nothing was changed.");announce("Installation cancelled. Nothing was changed.")}});
+}
+
+/* ---------- window, menus ---------- */
+function openWin(){if(S.restarting)return;S.winOpen=true;render();const t=$("#view [data-primary]")||$("#vh1");if(t)t.focus({preventScroll:true})}
+function closeWin(){S.winOpen=false;closeSheet(false);render();$("#mx").focus();status("")}
+const menus=[["#menu-app","#menu-app-list"],["#mx","#mx-list"]];
+function closeMenus(focusBtn){menus.forEach(([b,l])=>{if(!$(l).hidden){$(l).hidden=true;$(b).setAttribute("aria-expanded","false");if(focusBtn===b)$(b).focus()}})}
+function openMenu(b,l){closeMenus();if(l==="#mx-list")fillMx();$(l).hidden=false;$(b).setAttribute("aria-expanded","true");const f=$(l).querySelector("button");if(f)f.focus()}
+menus.forEach(([b,l])=>{
+  $(b).addEventListener("click",e=>{e.stopPropagation();if(S.restarting)return;$(l).hidden?openMenu(b,l):closeMenus()});
+  $(l).addEventListener("keydown",e=>{
+    const items=[...$(l).querySelectorAll("button")],i=items.indexOf(document.activeElement);
+    if(e.key==="ArrowDown"){e.preventDefault();items[(i+1)%items.length].focus()}
+    if(e.key==="ArrowUp"){e.preventDefault();items[(i-1+items.length)%items.length].focus()}
+    if(e.key==="Escape"){e.preventDefault();closeMenus(b)}
+    if(e.key==="Tab")closeMenus();
+  });
+});
+document.addEventListener("click",e=>{if(!e.target.closest(".mlist"))closeMenus()});
+
+function command(c){
+  closeMenus();
+  switch(c){
+    case "about":status("Update · design prototype for NextBSD (E45)");break;
+    case "check":if(["uptodate","checkfail"].includes(S.phase)){openWin();flow(runCheck())}else{openWin();status("An update is already "+(S.phase==="available"?"available":"in progress")+".")}break;
+    case "close":closeWin();break;
+    case "hide":closeWin();status("");break;
+    case "open":openWin();break;
+    case "download":openWin();if(S.phase==="available")flow(runDownload(false));break;
+    case "install":openWin();askInstall();break;
+    case "restart-ask":openWin();confirmRestart();break;
+    case "software":status("Software opens its Updates view for apps you installed. (Not part of this prototype.)");break;
+    case "bootenv":status("BootEnvironments is a separate settings app. (Not part of this prototype.)");break;
+  }
+}
+
+/* ---------- simulator controls ---------- */
+const SIMKEY="nextbsd-update-sim-open";
+function setSimOpen(open){$("#simbody").hidden=!open;$("#simtog").setAttribute("aria-expanded",open);try{localStorage.setItem(SIMKEY,open?"1":"0")}catch(e){}}
+$("#simtog").onclick=()=>setSimOpen($("#simbody").hidden);
+(function(){let open=false;try{open=localStorage.getItem(SIMKEY)==="1"}catch(e){}setSimOpen(open)})();
+function syncSim(){
+  $("#sim-fail").value=S.fail;$("#sim-once").checked=S.failOnce;
+  document.querySelectorAll('input[name="sim-speed"]').forEach(r=>r.checked=+r.value===S.speed);
+  $("#simstate").textContent=S.restarting?"restarting":S.phase+(S.phase==="downloading"&&S.dl.paused?" (paused)":"");
+  $("#sim-skipwrap").hidden=!S.restarting;
+}
+$("#sim").addEventListener("change",e=>{
+  const t=e.target;
+  if(t.id==="sim-fail"){S.fail=t.value;renderExtras();status(t.value==="none"?"Simulator: no forced failure.":"Simulator: the next “"+t.options[t.selectedIndex].text+"” will fail.")}
+  if(t.id==="sim-once")S.failOnce=t.checked;
+  if(t.name==="sim-speed")S.speed=+t.value;
+});
+function resetTo(kind){
+  cancelFlows();closeMenus();if(sheet)closeSheet(false);
+  const boot=$("#boot");boot.hidden=true;boot.className="boot";stage("");L=null;
+  Object.assign(S,{installed:OLD,justUpdated:false,noUpdates:false,backup:null,winOpen:true,inst:null,err:null,deferred:false,autoInstalled:false,installedAt:null,pendingBE:false,restarting:false,
+    dl:{bytes:0,rate:0,paused:false,auto:false}});
+  if(kind==="start"){S.lastChecked=yesterday();setPhase("uptodate",{keepFocus:true});status("Simulator: NextBSD "+OLD+", not checked yet. Click Check for Updates.")}
+  else if(kind==="available"){S.lastChecked=new Date();foundUpdate(true);status("Simulator: a check found NextBSD "+NEW+".")}
+  else{S.lastChecked=new Date();S.dl.bytes=TOTAL;setPhase("ready",{keepFocus:true});status("Simulator: NextBSD "+NEW+" is downloaded.")}
+}
+$("#sim").addEventListener("click",e=>{
+  const r=e.target.closest("[data-reset]");if(r)resetTo(r.dataset.reset);
+  if(e.target.closest("#sim-skip")&&S.restarting){cancelFlows();flow(finishBoot(L&&L.entries?L.entries[L.sel].v:NEW))}
+});
+
+/* ---------- events ---------- */
+document.addEventListener("click",e=>{
+  const t=e.target.closest("button,[data-dock]");if(!t)return;
+  if(t.dataset.cmd){command(t.dataset.cmd);return}
+  if(t.dataset.disc){const id=t.dataset.disc,open=t.getAttribute("aria-expanded")!=="true";S.open[id]=open;t.setAttribute("aria-expanded",open);$("#d-"+id).hidden=!open;if(id==="log"&&open){const l=$("#log");if(l)l.scrollTop=l.scrollHeight}return}
+  if(t.dataset.ldr!=null&&L&&!L.done){L.sel=+t.dataset.ldr;L.done=true;L.resolve(L.sel);return}
+  if(t.dataset.dock==="update"){if(S.winOpen)$("#win").scrollIntoView({block:"nearest"});else openWin();return}
+  switch(t.id){
+    case "b-check":flow(runCheck());break;
+    case "b-stop-check":cancelFlows();setPhase(S.prev==="checkfail"?"checkfail":"uptodate");status("Check stopped.");break;
+    case "b-net":status("Network settings would open here. (Not part of this prototype.)");break;
+    case "b-download":flow(runDownload(false));break;
+    case "b-pause":S.dl.paused=!S.dl.paused;t.textContent=S.dl.paused?"Resume":"Pause";updateDl();syncSim();announce(S.dl.paused?"Download paused.":"Download resumed.");break;
+    case "b-cancel-dl":cancelFlows();S.dl={bytes:0,rate:0,paused:false,auto:false};setPhase("available");status("Download cancelled. The partial download was deleted.");break;
+    case "b-retry":flow(runDownload(S.dl.auto));break;
+    case "b-install":askInstall();break;
+    case "b-stop-inst":flow(stopInstall());break;
+    case "b-redownload":S.dl={bytes:0,rate:0,paused:false,auto:false};flow(runDownload(false));break;
+    case "b-retry-inst":S.err=null;setPhase("ready");askInstall();break;
+    case "b-later":S.deferred=true;setPhase("restart");status("You can restart from Update, the Dock or the menu bar when you’re ready.");break;
+    case "b-restart":flow(runRestart());break;
+    case "b-restart-ask":confirmRestart();break;
+    case "b-restart-new":S.pendingBE=true;confirmRestart();break;
+    case "win-close":case "win-mini":closeWin();break;
+  }
+});
+$("#boot").addEventListener("keydown",e=>{
+  if(L&&!L.done)loaderKey(e);
+  else if(e.key==="Tab"){e.preventDefault()}
+});
+document.addEventListener("keydown",e=>{
+  if(S.restarting)return;
+  const mod=e.metaKey||e.ctrlKey;
+  if(!$("#sheetwrap").hidden)return;
+});
+
+/* ---------- dock ---------- */
+(function(){
+  const t=(inner,o)=>'<div class="tile'+(o&&o.on?' on':'')+(o&&o.cls?' '+o.cls:'')+'"'+(o&&o.attr?o.attr:'')+'>'+inner+'</div>';
+  const sw='<svg class="ico" width="44" height="44" viewBox="0 0 64 64"><rect x="3" y="3" width="58" height="58" rx="12" fill="#26262d" stroke="#55555f" stroke-width="1.5"/><g transform="translate(14 13) scale(1.5)" fill="none" stroke="#00d4ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1.2 12H6.2z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/></g></svg>';
+  const rec='<svg class="ico" width="44" height="44" viewBox="0 0 64 64"><rect x="2" y="2" width="60" height="60" rx="13" fill="hsl(140,30%,30%)" stroke="hsl(140,30%,42%)" stroke-width="1.5"/><g transform="translate(14 14) scale(1.5)" fill="none" stroke="#f5f5f7" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4.5l-3.2 5.6M6 6.6l-.2 3.5 3.3-.9M15 4.5l3.2 5.6M18.4 8.3l-.2 3.4M8 19.5h8M16 19.5l-1.8-3M8 19.5l1.8-3"/></g></svg>';
+  $("#dock").innerHTML=
+    t('<img class="ico" src="'+ICON_WORKSPACE+'" width="44" height="44" alt="">',{on:1})+
+    t('<img class="ico" src="'+ICON_TERMINAL+'" width="44" height="44" alt="">',{on:1})+
+    t(sw)+
+    '<div class="tile app on" id="dock-update" data-dock="update" title="Update"></div>'+
+    '<div class="sepr"></div>'+t(rec);
+  $("#dock").setAttribute("aria-hidden","true");
+})();
+
+function tick(){const d=new Date();$("#clock").textContent=d.toLocaleDateString(undefined,{weekday:"short"})+" "+fmtTime(d)}
+tick();setInterval(tick,30000);
+render();
+window.__sim={S,P,resetTo,get phase(){return S.phase}};
+})();
+</script>
+</body>
+</html>
