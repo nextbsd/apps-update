@@ -1,0 +1,18 @@
+{
+  ApplicationName = "Update";
+  ApplicationDescription = "Keeps NextBSD up to date";
+  ApplicationRelease = "27.0";
+  Authors = ("Joseph Maloney <pkgdemonteam@gmail.com>");
+  URL = "License: BSD 2-Clause";
+  Copyright = "Copyright (C) 2026 Joseph Maloney";
+  NSHumanReadableCopyright = "Copyright (C) 2026 Joseph Maloney";
+  NSPrincipalClass = NSApplication;
+  NSIcon = "Update.png";
+  CFBundleIconFile = "Update.png";
+  NSExecutable = Update;
+  CFBundleIdentifier = "org.nextbsd.Update";
+  CFBundleName = "Update";
+  CFBundleDisplayName = "Update";
+  CFBundleShortVersionString = "27.0";
+  CFBundleVersion = "27.0";
+}
