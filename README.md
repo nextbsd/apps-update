@@ -38,8 +38,8 @@ does the work in typed operations whose pkg arguments are all its own:
 | UpdateDownload | `pkg upgrade -F`: into pkg's cache, nothing installed | `org.nextbsd.settings.update.check` |
 | UpdateInstall | `pkg upgrade`, from the cache | `org.nextbsd.settings.update` (authenticate-admin) |
 | UpdateCancel | stops a check or a download | `org.nextbsd.settings.update.check` |
-| UpdateRestart | `shutdown -r now`, only while an installed update waits for it | `org.nextbsd.settings.update.check` |
-| UpdateStatus | the running job, or the last one | `org.nextbsd.settings.update.check` |
+| UpdateRestart | `shutdown -r now`, only while an installed update waits for it | none: the install's approval covers it |
+| UpdateStatus | the running job, or the last one | none (the console session) |
 
 No pkg run names a package: there is an update when `pkg upgrade -n` has
 something to do, and after the check every run keeps to the catalogue it
@@ -57,6 +57,15 @@ what it fetched); an install goes on, and Update shows it when opened
 again. After an install the helper records the boot it happened in, so
 Update says a restart is waiting until the next boot, and "Updated
 successfully." after it.
+
+An update replaces SettingsHelper and its rules too, so the restart
+depends on neither: the administrator who allowed the install allowed
+the restart, and the helper that installed the update stays running
+until then. If the restart still can't go through the helper (it was
+stopped, and the one now installed has no UpdateRestart), Update says
+"Restart your computer to finish updating" and points to the login
+window's Restart button: neither loginwindow nor Workspace takes a
+restart request from a session app.
 
 ## Building
 

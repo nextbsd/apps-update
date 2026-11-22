@@ -452,6 +452,22 @@ UPSystemVersion (void)
                           bold:NO
                             at:y];
         }
+      else if (restartByHand)
+        {
+          /* Nothing in the session takes a restart request: the login
+           * window's Restart button does it. No error: the update is
+           * installed. */
+          y = [self addHeadTitle:@"Restart to finish updating"
+                             sub:@"Restart your computer to finish "
+                                 @"updating."
+                           badge:UPBadgeRestart];
+          y = [self addCallout:UPCalloutInfo
+                          text:@"Log out, then click Restart in the login "
+                               @"window."
+                        detail:nil
+                          bold:NO
+                            at:y];
+        }
       else
         {
           y = [self addHeadTitle:@"Restart to finish updating"
@@ -932,7 +948,14 @@ UPSystemVersion (void)
     return;
   rc = [NBSettingsHelper restartForUpdateWithAuthorization:checkAuth];
   if (rc != NBAuthorizationOK)
-    [self refused:rc];
+    {
+      /* The helper that answers may not be the one that installed the
+       * update (the update replaced it, and it has no restart or no
+       * rule): say how to restart, not why it failed. */
+      restartByHand = YES;
+      deferred = YES;
+      [self setPhase:UPPhaseRestart];
+    }
 }
 
 @end

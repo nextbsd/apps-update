@@ -19,7 +19,9 @@
  *   installing   one bar and one status line
  *   installfail  it couldn't be installed; Try Again...
  *   restart      Later, Restart Now; after Later, "Restart to finish
- *                updating" with Restart...
+ *                updating" with Restart...; and if the helper can't
+ *                restart (an update replaced it), "Restart your
+ *                computer to finish updating" and how
  *
  * The work is SettingsHelper's (nextbsd-userland src/SettingsHelper,
  * sh_update.c): Update never runs pkg itself. Check, download and
@@ -66,6 +68,7 @@ typedef enum
   BOOL noUpdates;		/* a check found nothing */
   BOOL justUpdated;		/* restarted after an update */
   BOOL deferred;		/* Later was clicked */
+  BOOL restartByHand;		/* the helper couldn't restart */
 
   /* The download's rate, smoothed. */
   NSTimeInterval rateAt;
