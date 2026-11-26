@@ -483,13 +483,12 @@ const dateShort=d=>(d||new Date()).toLocaleDateString(undefined,{weekday:"short"
 // system is never touched. Without ZFS (a UFS install) it updates in place
 // and there are no earlier versions to go back to.
 const P={get be(){return S.fs==="zfs"}};
-const daysAgo=n=>{const d=new Date(Date.now()-n*864e5);d.setHours(9,41,0,0);return d};
 // The boot environments, newest first. `next` is the one the loader starts by
 // default (bectl activate); `running` is the one in use.
 function freshBEs(){return [
-  {v:OLD,at:daysAgo(6),mb:2140},
-  {v:"27.0.0-189",at:daysAgo(13),mb:2090},
-  {v:"27.0.0-186",at:daysAgo(24),mb:2075}]}
+  {v:OLD,mb:2140},
+  {v:"27.0.0-189",mb:2090},
+  {v:"27.0.0-186",mb:2075}]}
 const S={fs:"zfs",bes:freshBEs(),next:OLD,keep:3,showVersions:false,phase:"uptodate",prev:"uptodate",installed:OLD,lastChecked:yesterday(),justUpdated:false,noUpdates:false,backup:null,winOpen:true,
   speed:1,fail:"none",failOnce:true,
   dl:{bytes:0,rate:0,paused:false,auto:false},
@@ -824,7 +823,7 @@ const STEP={
     await seg(st,pr,.5,1)},
   async finish(st,pr){const I=S.inst;st.sub="";log("Cleaning up downloaded packages");
     if(I.be){log("bectl umount "+NEW);log("bectl activate "+NEW+" (starts next time; "+S.installed+" stays installed)");
-      S.bes.unshift({v:NEW,at:new Date(),mb:2160});S.next=NEW;
+      S.bes.unshift({v:NEW,mb:2160});S.next=NEW;
       const old=S.bes.filter(b=>b.v!==S.installed&&b.v!==S.next).slice(Math.max(0,S.keep-2));
       old.forEach(b=>log("bectl destroy "+b.v+" (keeps the "+S.keep+" most recent)"));
       S.bes=S.bes.filter(b=>!old.includes(b))}
