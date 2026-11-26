@@ -23,6 +23,11 @@
  *                restart (an update replaced it), "Restart your
  *                computer to finish updating" and how
  *
+ * On a ZFS install every update goes into a new boot environment named
+ * after its version, and the running system isn't touched
+ * (nextbsd/nextbsd#703); Installed Versions lists them, restarts into one
+ * or removes one, and sets how many an update keeps.
+ *
  * The work is SettingsHelper's (nextbsd-userland src/SettingsHelper,
  * sh_update.c): Update never runs pkg itself. Check, download and
  * install start a job there and return; while one runs Update asks for
@@ -69,6 +74,12 @@ typedef enum
   BOOL justUpdated;		/* restarted after an update */
   BOOL deferred;		/* Later was clicked */
   BOOL restartByHand;		/* the helper couldn't restart */
+  BOOL bootenvs;		/* / is a ZFS boot environment: updates go
+				   into new ones */
+  BOOL showingVersions;		/* Installed Versions is in the window */
+  NSArray *versions;		/* bectl list, newest first */
+  int keep;			/* versions an update keeps */
+  NSString *pendingVersion;	/* the one a sheet asks about */
 
   /* The download's rate, smoothed. */
   NSTimeInterval rateAt;
