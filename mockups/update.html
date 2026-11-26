@@ -641,7 +641,7 @@ const VIEW={
       const run=b.v===S.installed,nx=b.v===S.next;
       const tags=(run?'<span class="vtag">Running</span>':'')+(nx&&!run?'<span class="vtag next">Starts next</span>':'');
       const acts=run?'':(btn("b-be-start-"+b.v,"Restart Into…",{small:true})+(nx?'':btn("b-be-rm-"+b.v,"Remove…",{small:true})));
-      return '<tr><td><span class="vn">NextBSD '+b.v+'</span>'+tags+'<span class="vd">Installed '+dateShort(b.at)+'</span></td><td class="size">'+(b.mb/1000).toFixed(1)+' GB</td><td class="act">'+acts+'</td></tr>'}).join("");
+      return '<tr><td><span class="vn">NextBSD '+b.v+'</span>'+tags+'</td><td class="size">'+(b.mb/1000).toFixed(1)+' GB</td><td class="act">'+acts+'</td></tr>'}).join("");
     return head({title:"Installed Versions",sub:"Each update is installed alongside the others, so you can go back to an earlier version. Your accounts, files and settings are shared by all of them."})+
       '<div class="pkgwrap" style="margin-top:14px"><table class="grid vers"><colgroup><col><col class="c-size"><col class="c-act"></colgroup><thead><tr><th scope="col">Version</th><th scope="col" class="size">Size</th><th scope="col"><span class="sr">Actions</span></th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
       '<div class="keep"><label for="keep-n">Keep the</label><span class="popup"><select id="keep-n">'+[2,3,5,10].map(n=>'<option'+(n===S.keep?' selected':'')+'>'+n+'</option>').join("")+'</select></span><span>most recent versions. Older ones are removed after an update.</span></div>'+
@@ -917,7 +917,7 @@ async function runRestart(){
   boot.classList.add("black");stage('<div><div class="bspin"></div><p class="bmsg">Restarting…</p></div>');await sleep(2400);
   stage("");await sleep(700);
   const start=S.once||S.next;
-  const entries=P.be?S.bes.map(b=>({v:b.v,label:"NextBSD "+b.v,note:b.v===S.installed?"running before":"installed "+dateShort(b.at)}))
+  const entries=P.be?S.bes.map(b=>({v:b.v,label:"NextBSD "+b.v,note:b.v===S.installed?"running before":""}))
     .sort((a,b)=>(b.v===start)-(a.v===start)):[{v:NEW,label:"NextBSD "+NEW,note:"default"}];
   const pick=entries.length>1?await loaderChoose(entries):0;L=null;S.once=null;
   const v=entries[pick].v;
