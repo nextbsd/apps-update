@@ -8,7 +8,10 @@
 #import "NBAuthorizationPanel.h"
 #import "NBSettingsHelper.h"
 
+#include <sys/param.h>
+#include <sys/mount.h>
 #include <math.h>
+#include <string.h>
 
 static NSString *const UPCheckRight = @"org.nextbsd.settings.update.check";
 static NSString *const UPInstallRight = @"org.nextbsd.settings.update";
@@ -67,6 +70,130 @@ UPSystemVersion (void)
   return [NSString stringWithFormat:@"%@.%@", version, build];
 }
 
+/* Is / a ZFS boot environment (<pool>/ROOT/<name>)? Then updates go into
+ * new boot environments. */
+static BOOL
+UPBootEnvironments (void)
+{
+  struct statfs sfs;
+
+  return statfs ("/", &sfs) == 0 && strcmp (sfs.f_fstypename, "zfs") == 0
+    && strstr (sfs.f_mntfromname, "/ROOT/") != NULL;
+}
+
+#define UPBootEnvUpdateConf \
+  @"/Local/Library/Preferences/org.nextbsd.bootenv-update.conf"
+
+/* How many versions an update keeps: bootenv-update's keep=, else 3. */
+static int
+UPReadKeep (void)
+{
+  NSString *text = [NSString stringWithContentsOfFile:UPBootEnvUpdateConf];
+  NSEnumerator *e = [[text componentsSeparatedByString:@"\n"]
+                      objectEnumerator];
+  NSString *l;
+  int n = 3;
+
+  while ((l = [e nextObject]) != nil)
+    {
+      l = [l stringByTrimmingCharactersInSet:
+               [NSCharacterSet whitespaceCharacterSet]];
+      if ([l hasPrefix:@"keep"] && [l rangeOfString:@"="].location
+          != NSNotFound)
+        n = [[[l componentsSeparatedByString:@"="] lastObject] intValue];
+    }
+  return n < 2 ? 2 : n;
+}
+
+/* A name an update gave (27.0.0-192, 27.0.0-192-2), as against one a
+ * person chose (bectl create test). */
+static BOOL
+UPBuildNamed (NSString *name)
+{
+  NSCharacterSet *digits = [NSCharacterSet decimalDigitCharacterSet];
+
+  return [name length] > 0
+    && [digits characterIsMember:[name characterAtIndex:0]]
+    && [name rangeOfString:@"-"].location != NSNotFound;
+}
+
+/* "NextBSD 27.0.0-192" for one an update or the installer named; the
+ * name itself for one a person named. */
+static NSString *
+UPVersionTitle (NSString *name)
+{
+  if (UPBuildNamed (name))
+    return [@"NextBSD " stringByAppendingString:name];
+  if ([name hasPrefix:@"NextBSD-"])
+    return [@"NextBSD " stringByAppendingString:[name substringFromIndex:8]];
+  if ([name isEqualToString:@"default"])
+    return @"NextBSD";
+  return name;
+}
+
+static NSInteger
+UPCompareVersions (id a, id b, void *ctx)
+{
+  NSString *na = [a objectForKey:@"name"], *nb = [b objectForKey:@"name"];
+  BOOL ba = UPBuildNamed (na), bb = UPBuildNamed (nb);
+
+  if (ba != bb)
+    return ba ? NSOrderedAscending : NSOrderedDescending;
+  /* Newest first. */
+  return [nb compare:na options:NSNumericSearch];
+}
+
+/* The boot environments, from bectl list -H (no privilege needed):
+ * name, running, next, space; newest build first, then the others. */
+static NSArray *
+UPReadVersions (void)
+{
+  NSTask *task = AUTORELEASE ([[NSTask alloc] init]);
+  NSPipe *pipe = [NSPipe pipe];
+  NSMutableArray *list = [NSMutableArray array];
+  NSString *out;
+  NSEnumerator *e;
+  NSString *l;
+
+  [task setLaunchPath:@"/sbin/bectl"];
+  [task setArguments:[NSArray arrayWithObjects:@"list", @"-H", nil]];
+  [task setStandardOutput:pipe];
+  /* NSTask starts it in Update's own directory, which may be one the
+   * user can't enter. */
+  [task setCurrentDirectoryPath:@"/"];
+  NS_DURING
+    [task launch];
+  NS_HANDLER
+    return list;
+  NS_ENDHANDLER
+  out = AUTORELEASE ([[NSString alloc]
+                       initWithData:[[pipe fileHandleForReading]
+                                      readDataToEndOfFile]
+                           encoding:NSUTF8StringEncoding]);
+  [task waitUntilExit];
+  e = [[out componentsSeparatedByString:@"\n"] objectEnumerator];
+  while ((l = [e nextObject]) != nil)
+    {
+      NSArray *f = [l componentsSeparatedByString:@"\t"];
+      NSString *active;
+
+      if ([f count] < 4 || [[f objectAtIndex:0] length] == 0)
+        continue;
+      active = [f objectAtIndex:1];
+      [list addObject:
+              [NSDictionary dictionaryWithObjectsAndKeys:
+                              [f objectAtIndex:0], @"name",
+                            [NSNumber numberWithBool:
+                                        [active rangeOfString:@"N"].location
+                                        != NSNotFound], @"running",
+                            [NSNumber numberWithBool:
+                                        [active rangeOfString:@"R"].location
+                                        != NSNotFound], @"next",
+                            [f objectAtIndex:3], @"space", nil]];
+    }
+  return [list sortedArrayUsingFunction:UPCompareVersions context:NULL];
+}
+
 @interface UPController (Private)
 - (NSString *)updateName:(BOOL)capital;
 - (void)buildMenu;
@@ -99,6 +226,17 @@ UPSystemVersion (void)
 - (void)confirmRestart:(id)sender;
 - (void)restartSheetDidEnd:(NSWindow *)sheet returnCode:(NSInteger)code
                contextInfo:(void *)info;
+- (void)showVersions:(id)sender;
+- (void)hideVersions:(id)sender;
+- (CGFloat)addVersionsAt:(CGFloat)y;
+- (void)restartInto:(id)sender;
+- (void)removeVersion:(id)sender;
+- (void)keepChanged:(id)sender;
+- (void)versionSheetDidEnd:(NSWindow *)sheet returnCode:(NSInteger)code
+               contextInfo:(void *)info;
+- (NSString *)runningVersionTitle;
+- (void)startPendingVersion;
+- (void)removePendingVersion;
 @end
 
 @implementation UPController
@@ -114,6 +252,8 @@ UPSystemVersion (void)
   RELEASE (previous);
   RELEASE (available);
   RELEASE (line);
+  RELEASE (versions);
+  RELEASE (pendingVersion);
   [super dealloc];
 }
 
@@ -127,6 +267,7 @@ UPSystemVersion (void)
     [NSApp setApplicationIconImage:icon];
   [self buildMenu];
   ASSIGN (installed, UPSystemVersion ());
+  bootenvs = UPBootEnvironments ();
   checkAuth = RETAIN ([NBAuthorization authorizationWithRight:UPCheckRight]);
   installAuth = RETAIN ([NBAuthorization
                           authorizationWithRight:UPInstallRight]);
@@ -188,8 +329,10 @@ UPSystemVersion (void)
 - (BOOL)validateMenuItem:(id<NSMenuItem>)item
 {
   if ([item action] == @selector (checkForUpdates:))
-    return phase == UPPhaseStart || phase == UPPhaseCheckFailed
-      || phase == UPPhaseUnavailable;
+    return !showingVersions && (phase == UPPhaseStart
+      || phase == UPPhaseCheckFailed || phase == UPPhaseUnavailable);
+  if ([item action] == @selector (showVersions:))
+    return bootenvs && !showingVersions && phase != UPPhaseInstalling;
   return YES;
 }
 
@@ -215,6 +358,9 @@ UPSystemVersion (void)
            keyEquivalent:@""];
   [[menu addItemWithTitle:@"Check for Updates"
                    action:@selector (checkForUpdates:)
+            keyEquivalent:@""] setTarget:self];
+  [[menu addItemWithTitle:@"Installed Versions…"
+                   action:@selector (showVersions:)
             keyEquivalent:@""] setTarget:self];
   [menu addItemWithTitle:@"Close" action:@selector (performClose:)
            keyEquivalent:@"w"];
@@ -251,7 +397,24 @@ UPSystemVersion (void)
   progressText = nil;
   progressRight = nil;
 
-  switch (phase)
+  /* Installed Versions covers the update's own phase, which waits
+   * underneath until Done. */
+  if (showingVersions)
+    {
+      y = [self addHeadTitle:@"Installed Versions"
+                         sub:@"Go back to an earlier version of NextBSD. "
+                             @"Your accounts, files and settings are the "
+                             @"same in all of them."
+                       badge:UPBadgeNone];
+      y = [self addVersionsAt:y];
+      y = [self addButtons:
+                  [NSArray arrayWithObject:
+                             [self button:@"Done"
+                                   action:@selector (hideVersions:)
+                                  primary:YES]]
+                        at:y];
+    }
+  else switch (phase)
     {
     case UPPhaseStart:
       /* Update says nothing about being current until it has checked. */
@@ -260,10 +423,18 @@ UPSystemVersion (void)
                              : noUpdates ? @"No updates available." : nil
                        badge:justUpdated ? UPBadgeOK : UPBadgeNone];
       y = [self addButtons:
-                  [NSArray arrayWithObject:
-                             [self button:@"Check for Updates"
-                                   action:@selector (checkForUpdates:)
-                                  primary:YES]]
+                  bootenvs
+                  ? [NSArray arrayWithObjects:
+                               [self button:@"Check for Updates"
+                                     action:@selector (checkForUpdates:)
+                                    primary:YES],
+                               [self button:@"Installed Versions…"
+                                     action:@selector (showVersions:)
+                                    primary:NO], nil]
+                  : [NSArray arrayWithObject:
+                               [self button:@"Check for Updates"
+                                     action:@selector (checkForUpdates:)
+                                    primary:YES]]
                         at:y];
       break;
 
@@ -390,8 +561,12 @@ UPSystemVersion (void)
       y = [self addHeadTitle:[NSString stringWithFormat:
                                          @"Installing %@…",
                                          [self updateName:NO]]
-                         sub:@"Installing over the running system. Don’t "
-                             @"turn off your computer."
+                         sub:bootenvs
+                             ? @"Installing into a new boot environment. "
+                               @"You can keep working; nothing changes "
+                               @"until you restart."
+                             : @"Installing over the running system. Don’t "
+                               @"turn off your computer."
                        badge:UPBadgeNone];
       y = [self addBarAt:y indeterminate:NO];
       break;
@@ -406,7 +581,17 @@ UPSystemVersion (void)
                                    action:@selector (install:)
                                   primary:YES]]
                         at:y];
-      if (changed)
+      if (bootenvs)
+        y = [self addCallout:UPCalloutOK
+                        text:@"Your system was not changed."
+                      detail:[NSString stringWithFormat:
+                                @"Update stopped and removed the incomplete "
+                                @"copy. You’re still using NextBSD %@, "
+                                @"exactly as before.",
+                                previous != nil ? previous : have]
+                        bold:YES
+                          at:y];
+      else if (changed)
         y = [self addCallout:UPCalloutError
                         text:@"NextBSD is only partly updated."
                       detail:@"Update stopped while installing packages, "
@@ -445,12 +630,26 @@ UPSystemVersion (void)
                                        action:@selector (restartNow:)
                                       primary:YES], nil]
                             at:y];
-          y = [self addCallout:UPCalloutInfo
-                          text:@"Save your work in other apps before you "
-                               @"restart."
-                        detail:nil
-                          bold:NO
-                            at:y];
+          if (bootenvs)
+            y = [self addCallout:UPCalloutOK
+                            text:[NSString stringWithFormat:
+                                    @"%@ is installed alongside the system "
+                                    @"you’re using, and starts next time.",
+                                    [self updateName:YES]]
+                          detail:[NSString stringWithFormat:
+                                    @"NextBSD %@ stays installed. If "
+                                    @"something goes wrong, go back to it "
+                                    @"in Installed Versions.",
+                                    previous != nil ? previous : have]
+                            bold:NO
+                              at:y];
+          else
+            y = [self addCallout:UPCalloutInfo
+                            text:@"Save your work in other apps before you "
+                                 @"restart."
+                          detail:nil
+                            bold:NO
+                              at:y];
         }
       else if (restartByHand)
         {
@@ -489,9 +688,13 @@ UPSystemVersion (void)
                                     @"you restart.", previous]
                                : @"You’re still using the earlier NextBSD "
                                  @"until you restart."
-                        detail:@"Some apps may behave oddly until you "
-                               @"restart, because parts of the system were "
-                               @"replaced while running."
+                        detail:bootenvs
+                               ? @"The update waits in a new boot "
+                                 @"environment; the system you’re using "
+                                 @"hasn’t changed."
+                               : @"Some apps may behave oddly until you "
+                                 @"restart, because parts of the system were "
+                                 @"replaced while running."
                           bold:NO
                             at:y];
         }
@@ -956,6 +1159,234 @@ UPSystemVersion (void)
       deferred = YES;
       [self setPhase:UPPhaseRestart];
     }
+}
+
+/* ---- Installed Versions ---- */
+
+- (void)showVersions:(id)sender
+{
+  if (!bootenvs)
+    return;
+  ASSIGN (versions, UPReadVersions ());
+  keep = UPReadKeep ();
+  showingVersions = YES;
+  [self layout];
+}
+
+- (void)hideVersions:(id)sender
+{
+  showingVersions = NO;
+  [self layout];
+}
+
+/* One row a version: its name and what it is, its size, and Restart
+ * Into... and Remove... where they apply; then how many to keep. */
+- (CGFloat)addVersionsAt:(CGFloat)y
+{
+  CGFloat right = UPWindowWidth - UPMarginX;
+  NSUInteger i, count = [versions count];
+  NSTextField *label;
+  NSPopUpButton *popup;
+  NSArray *choices = [NSArray arrayWithObjects:@"2", @"3", @"5", @"10", nil];
+  NSString *k = [NSString stringWithFormat:@"%d", keep];
+
+  y += 12;
+  if (count == 0)
+    {
+      label = UPLabel (@"Update couldn’t list the installed versions.",
+                       [NSFont systemFontOfSize:13], 400);
+      [label setFrameOrigin:NSMakePoint (UPTextX, y)];
+      [content addSubview:label];
+      y = NSMaxY ([label frame]);
+    }
+  for (i = 0; i < count; i++)
+    {
+      NSDictionary *v = [versions objectAtIndex:i];
+      NSString *name = [v objectForKey:@"name"];
+      BOOL running = [[v objectForKey:@"running"] boolValue];
+      BOOL next = [[v objectForKey:@"next"] boolValue];
+      NSString *tag = running ? @"Running" : next ? @"Starts next" : nil;
+      CGFloat bottom, x = right;
+      NSButton *b;
+
+      label = UPLabel (UPVersionTitle (name), [NSFont boldSystemFontOfSize:13],
+                       160);
+      [label setFrameOrigin:NSMakePoint (UPMarginX, y)];
+      [content addSubview:label];
+      bottom = NSMaxY ([label frame]);
+      if (tag != nil)
+        {
+          label = UPLabel (tag, [NSFont systemFontOfSize:11], 160);
+          [label setTextColor:UPSecondaryColor ()];
+          [label setFrameOrigin:NSMakePoint (UPMarginX, bottom)];
+          [content addSubview:label];
+          bottom = NSMaxY ([label frame]);
+        }
+      label = UPLabel ([v objectForKey:@"space"], [NSFont systemFontOfSize:11],
+                       56);
+      [label setAlignment:NSRightTextAlignment];
+      [label setTextColor:UPSecondaryColor ()];
+      [label setFrameOrigin:NSMakePoint (UPMarginX + 160, y + 2)];
+      [content addSubview:label];
+      if (!running && !next)
+        {
+          b = [self button:@"Remove…" action:@selector (removeVersion:)
+                   primary:NO];
+          [b setTag:(NSInteger) i];
+          x -= NSWidth ([b frame]);
+          [b setFrameOrigin:NSMakePoint (x, y)];
+          [content addSubview:b];
+          x -= 8;
+        }
+      if (!running)
+        {
+          b = [self button:@"Restart Into…" action:@selector (restartInto:)
+                   primary:NO];
+          [b setTag:(NSInteger) i];
+          x -= NSWidth ([b frame]);
+          [b setFrameOrigin:NSMakePoint (x, y)];
+          [content addSubview:b];
+        }
+      y = MAX (bottom, y + 24) + 10;
+    }
+
+  y += 6;
+  label = UPLabel (@"Keep the", [NSFont systemFontOfSize:13], 80);
+  [label sizeToFit];
+  [label setFrameOrigin:NSMakePoint (UPMarginX, y + 3)];
+  [content addSubview:label];
+  popup = AUTORELEASE ([[NSPopUpButton alloc]
+                         initWithFrame:NSMakeRect (NSMaxX ([label frame]) + 6,
+                                                   y, 60, 24)
+                             pullsDown:NO]);
+  [popup addItemsWithTitles:choices];
+  if (![choices containsObject:k])
+    [popup addItemWithTitle:k];
+  [popup selectItemWithTitle:k];
+  [popup setTarget:self];
+  [popup setAction:@selector (keepChanged:)];
+  [content addSubview:popup];
+  label = UPLabel (@"most recent versions. Older ones are removed after "
+                   @"an update.", [NSFont systemFontOfSize:13],
+                   right - NSMaxX ([popup frame]) - 8);
+  [label setFrameOrigin:NSMakePoint (NSMaxX ([popup frame]) + 8, y + 3)];
+  [content addSubview:label];
+  return MAX (NSMaxY ([label frame]), y + 24);
+}
+
+/* The running version's name, for the sheets. */
+- (NSString *)runningVersionTitle
+{
+  NSEnumerator *e = [versions objectEnumerator];
+  NSDictionary *v;
+
+  while ((v = [e nextObject]) != nil)
+    if ([[v objectForKey:@"running"] boolValue])
+      return UPVersionTitle ([v objectForKey:@"name"]);
+  return @"the version you’re using";
+}
+
+- (void)restartInto:(id)sender
+{
+  NSString *name = [[versions objectAtIndex:[sender tag]] objectForKey:@"name"];
+  NSString *title = UPVersionTitle (name);
+
+  ASSIGN (pendingVersion, name);
+  NSBeginAlertSheet ([NSString stringWithFormat:@"Restart into %@?", title],
+                     @"Restart", @"Cancel", nil, window, self,
+                     @selector (versionSheetDidEnd:returnCode:contextInfo:),
+                     NULL, (void *) 1,
+                     @"Apps and system files go back to %@. Your accounts, "
+                     @"files and settings stay as they are. %@ stays "
+                     @"installed, and you can come back to it here.",
+                     title, [self runningVersionTitle]);
+}
+
+- (void)removeVersion:(id)sender
+{
+  NSDictionary *v = [versions objectAtIndex:[sender tag]];
+  NSString *title = UPVersionTitle ([v objectForKey:@"name"]);
+
+  ASSIGN (pendingVersion, [v objectForKey:@"name"]);
+  NSBeginAlertSheet ([NSString stringWithFormat:@"Remove %@?", title],
+                     @"Remove", @"Cancel", nil, window, self,
+                     @selector (versionSheetDidEnd:returnCode:contextInfo:),
+                     NULL, (void *) 2,
+                     @"This frees %@. Your accounts, files and settings "
+                     @"aren’t affected, but you won’t be able to go back to "
+                     @"this version.", [v objectForKey:@"space"]);
+}
+
+- (void)versionSheetDidEnd:(NSWindow *)sheet returnCode:(NSInteger)code
+               contextInfo:(void *)info
+{
+  if (code != NSAlertDefaultReturn || pendingVersion == nil)
+    return;
+  /* After the sheet has gone: the authorization panel is a sheet too. */
+  [self performSelector:(info == (void *) 1
+                         ? @selector (startPendingVersion)
+                         : @selector (removePendingVersion))
+             withObject:nil
+             afterDelay:0];
+}
+
+- (void)startPendingVersion
+{
+  NSString *reason = [@"restart into " stringByAppendingString:
+                                         UPVersionTitle (pendingVersion)];
+  int rc;
+
+  if (![NBAuthorizationPanel obtainAuthorization:installAuth
+                                          reason:reason
+                                       forWindow:window])
+    return;
+  rc = [NBSettingsHelper startVersion:pendingVersion
+                        authorization:installAuth];
+  if (rc != NBAuthorizationOK)
+    [self refused:rc];
+  /* Otherwise the computer is restarting. */
+}
+
+- (void)removePendingVersion
+{
+  NSString *reason = [@"remove " stringByAppendingString:
+                                   UPVersionTitle (pendingVersion)];
+  int rc;
+
+  if (![NBAuthorizationPanel obtainAuthorization:installAuth
+                                          reason:reason
+                                       forWindow:window])
+    return;
+  rc = [NBSettingsHelper removeVersion:pendingVersion
+                         authorization:installAuth];
+  if (rc != NBAuthorizationOK)
+    [self refused:rc];
+  ASSIGN (versions, UPReadVersions ());
+  [self layout];
+}
+
+- (void)keepChanged:(id)sender
+{
+  int n = [[sender titleOfSelectedItem] intValue], rc;
+
+  if (n == keep)
+    return;
+  if (![NBAuthorizationPanel obtainAuthorization:installAuth
+                                          reason:@"change how many versions "
+                                                 @"are kept"
+                                       forWindow:window])
+    {
+      [sender selectItemWithTitle:[NSString stringWithFormat:@"%d", keep]];
+      return;
+    }
+  rc = [NBSettingsHelper setKeepVersions:n authorization:installAuth];
+  if (rc != NBAuthorizationOK)
+    {
+      [sender selectItemWithTitle:[NSString stringWithFormat:@"%d", keep]];
+      [self refused:rc];
+      return;
+    }
+  keep = n;
 }
 
 @end

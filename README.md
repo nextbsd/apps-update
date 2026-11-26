@@ -23,8 +23,15 @@ E45).
   and the menu bar show when an update or a restart is waiting.
 - **Apps from Software** are updated in Software, not here.
 
-Not now: keeping the previous system as a backup (it needs ZFS boot
-environments), and automatic or scheduled updates.
+- **Installed Versions** (ZFS installs): every update goes into a new boot
+  environment named after its version, and the system you're using isn't
+  touched until you restart. Installed Versions lists them: Restart Into…
+  an earlier one, Remove… one, and how many an update keeps (3 unless you
+  change it). See the wiki's
+  [Updates and Boot Environments](https://github.com/nextbsd/nextbsd/wiki/Updates-and-Boot-Environments)
+  ([nextbsd/nextbsd#703](https://github.com/nextbsd/nextbsd/issues/703)).
+
+Not now: automatic or scheduled updates.
 
 ## How it works
 
@@ -36,10 +43,16 @@ does the work in typed operations whose pkg arguments are all its own:
 |-----------|----------------------|-------|
 | UpdateCheck | `pkg update`, then `pkg upgrade -n`: is there anything to do, and how much to download | `org.nextbsd.settings.update.check` (allow) |
 | UpdateDownload | `pkg upgrade -F`: into pkg's cache, nothing installed | `org.nextbsd.settings.update.check` |
-| UpdateInstall | `pkg upgrade`, from the cache | `org.nextbsd.settings.update` (authenticate-admin) |
+| UpdateInstall | `pkg upgrade`, from the cache; on ZFS into a new boot environment (`bootenv-update begin`, `pkg -r <clone> upgrade`, `bootenv-update commit`) | `org.nextbsd.settings.update` (authenticate-admin) |
 | UpdateCancel | stops a check or a download | `org.nextbsd.settings.update.check` |
 | UpdateRestart | `shutdown -r now`, only while an installed update waits for it | none: the install's approval covers it |
 | UpdateStatus | the running job, or the last one | none (the console session) |
+| UpdateStartVersion | `bectl activate <version>`, then restart | `org.nextbsd.settings.update` |
+| UpdateRemoveVersion | `bectl destroy -o <version>` | `org.nextbsd.settings.update` |
+| UpdateSetKeep | how many versions an update keeps | `org.nextbsd.settings.update` |
+
+Installed Versions reads the list itself, with `bectl list -H`, which needs
+no privilege.
 
 No pkg run names a package: there is an update when `pkg upgrade -n` has
 something to do, and after the check every run keeps to the catalogue it
