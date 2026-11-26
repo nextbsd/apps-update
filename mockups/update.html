@@ -159,6 +159,16 @@ table.grid{width:100%;border-collapse:collapse;table-layout:fixed}
 .pkgs .pn{font-family:var(--mono);font-size:11.5px;overflow-wrap:anywhere}
 .pkgs .pd{display:block;font-size:11.5px;color:var(--text-2)}
 .pkgs .tag{display:inline-block;margin-left:6px;font:600 9.5px var(--font);letter-spacing:.06em;text-transform:uppercase;color:var(--warn);border:1px solid #6b4a20;padding:0 4px;vertical-align:1px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.vers td{vertical-align:middle}
+.vers .vn{font-weight:600}
+.vers .vd{display:block;font-size:11.5px;color:var(--text-2)}
+.vers .vtag{display:inline-block;margin-left:6px;font:600 9.5px var(--font);letter-spacing:.06em;text-transform:uppercase;color:var(--link);border:1px solid currentColor;padding:0 4px;vertical-align:1px}
+.vers .vtag.next{color:var(--ok,#6fd38a)}
+.vers .c-act{width:210px}
+.vers td.act{text-align:right;white-space:nowrap}
+.vers td.act .gel{margin-left:6px}
+.keep{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:12px}
 .pkgwrap{border:1px solid;border-color:var(--shadow) var(--bevel) var(--bevel) var(--shadow);max-height:300px;overflow:auto}
 .pkgcap{margin:0 0 6px;font-size:11.5px;color:var(--text-2)}
 
@@ -331,6 +341,7 @@ fieldset[disabled] input,fieldset[disabled] select{cursor:default;opacity:.6}
         <div class="mlist" id="menu-app-list" hidden role="group" aria-label="Update menu">
           <button type="button" data-cmd="about">About Update</button>
           <button type="button" data-cmd="check">Check for Updates</button>
+          <button type="button" data-cmd="versions">Installed Versions…</button>
           <button type="button" data-cmd="close">Close Window</button>
           <button type="button" data-cmd="hide">Hide Update<kbd>⌘H</kbd></button>
         </div></span>
@@ -391,6 +402,10 @@ fieldset[disabled] input,fieldset[disabled] select{cursor:default;opacity:.6}
         <button type="button" class="gel small" data-reset="available">Update available</button>
         <button type="button" class="gel small" data-reset="ready">Ready to install</button>
       </div>
+      <h4 id="sim-fs-l">File system</h4>
+      <div class="seg2" role="radiogroup" aria-labelledby="sim-fs-l">
+        <label><input type="radio" name="sim-fs" value="zfs" checked><span>ZFS</span></label><label><input type="radio" name="sim-fs" value="ufs"><span>UFS</span></label>
+      </div>
       <h4><label for="sim-fail">Force a failure</label></h4>
       <span class="popup"><select id="sim-fail">
         <option value="none">None</option>
@@ -419,7 +434,7 @@ fieldset[disabled] input,fieldset[disabled] select{cursor:default;opacity:.6}
 (function(){
 "use strict";
 const ICON_WORKSPACE="data:image/png;base64,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", ICON_TERMINAL="data:image/png;base64,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";
-const OLD="27.0.0.178", NEW="27.0.0.185";
+const OLD="27.0.0-191", NEW="27.0.0-192";
 // Download sizes are sample data. rs = needs a restart (kernel and kernel extensions).
 const PKGS=[
   ["pkg","NextBSD package manager",9.1],
@@ -463,9 +478,19 @@ const dateShort=d=>(d||new Date()).toLocaleDateString(undefined,{weekday:"short"
 
 /* ---------- state ---------- */
 // Update never checks, downloads or installs on its own: only when the user
-// asks. No Preferences; without ZFS there are no boot-environment backups.
-const P={be:false};
-const S={phase:"uptodate",prev:"uptodate",installed:OLD,lastChecked:yesterday(),justUpdated:false,noUpdates:false,backup:null,winOpen:true,
+// asks. On ZFS every update installs into a new boot environment named after
+// the version (27.0.0-192) and is activated before the restart; the running
+// system is never touched. Without ZFS (a UFS install) it updates in place
+// and there are no earlier versions to go back to.
+const P={get be(){return S.fs==="zfs"}};
+const daysAgo=n=>{const d=new Date(Date.now()-n*864e5);d.setHours(9,41,0,0);return d};
+// The boot environments, newest first. `next` is the one the loader starts by
+// default (bectl activate); `running` is the one in use.
+function freshBEs(){return [
+  {v:OLD,at:daysAgo(6),mb:2140},
+  {v:"27.0.0-189",at:daysAgo(13),mb:2090},
+  {v:"27.0.0-186",at:daysAgo(24),mb:2075}]}
+const S={fs:"zfs",bes:freshBEs(),next:OLD,keep:3,showVersions:false,phase:"uptodate",prev:"uptodate",installed:OLD,lastChecked:yesterday(),justUpdated:false,noUpdates:false,backup:null,winOpen:true,
   speed:1,fail:"none",failOnce:true,
   dl:{bytes:0,rate:0,paused:false,auto:false},
   inst:null,err:null,deferred:false,autoInstalled:false,installedAt:null,pendingBE:false,restarting:false,
@@ -529,7 +554,7 @@ const swNote=()=>'<p class="muted" style="font-size:11.5px;margin:18px 0 0">Apps
 function head(o){
   return '<div class="uhead"><span class="uicon">'+updateIcon(64,"big")+(o.corner?CORNER[o.corner]:'')+'</span><div class="uh"><h1 id="vh1" tabindex="-1">'+o.title+'</h1>'+(o.sub?'<p class="sub">'+o.sub+'</p>':'')+(o.more||'')+'</div></div>';
 }
-const btn=(id,label,o)=>'<button type="button" class="gel'+(o&&o.primary?' blue big':'')+'" id="'+id+'"'+(o&&o.primary?' data-primary':'')+(o&&o.disabled?' disabled':'')+'>'+label+'</button>';
+const btn=(id,label,o)=>'<button type="button" class="gel'+(o&&o.primary?' blue big':'')+(o&&o.small?' small':'')+'" id="'+id+'"'+(o&&o.primary?' data-primary':'')+(o&&o.disabled?' disabled':'')+'>'+label+'</button>';
 const chips=()=>'<ul class="chips" aria-label="About this update"><li>Download <b class="mono">'+fmtMB(TOTAL)+'</b></li>'+'</ul>';
 
 /* ---------- views ---------- */
@@ -539,7 +564,7 @@ const VIEW={
        until a check has run. */
     const sub=S.justUpdated?"Updated successfully.":S.noUpdates?"No updates available.":"";
     return head({corner:S.justUpdated?"ok":"",title:"NextBSD "+S.installed,sub,
-      more:'<div class="acts">'+btn("b-check","Check for Updates",{primary:true})+'</div>'});
+      more:'<div class="acts">'+btn("b-check","Check for Updates",{primary:true})+(P.be?btn("b-versions","Installed Versions…"):'')+'</div>'});
   },
   checking(){
     return head({title:"Checking for updates…",sub:"Asking the NextBSD package repository what’s new.",
@@ -596,7 +621,7 @@ const VIEW={
     if(!S.deferred){
       return head({corner:"restart",title:"Restart required",sub:"NextBSD "+NEW+" is installed. Restart your computer to start using it.",
         more:'<div class="acts">'+btn("b-later","Later")+btn("b-restart","Restart Now",{primary:true})+'</div>'})+
-        (be?callout("ok",'<p>Your current system is kept as a backup you can return to.</p><p class="muted" style="font-size:11.5px">After restart, NextBSD '+OLD+' stays in the startup menu, in case something goes wrong.</p>')
+        (be?callout("ok",'<p>NextBSD '+NEW+' is installed alongside the system you’re using, and starts next time.</p><p class="muted" style="font-size:11.5px">NextBSD '+OLD+' stays installed. If something goes wrong, go back to it in <button type="button" class="linkbtn" data-cmd="versions">Installed Versions</button> or from the startup menu.</p>')
            :callout("info",'<p>Save your work in other apps before you restart.</p>'));
     }
     return head({corner:"restart",title:"Restart to finish updating",sub:(S.autoInstalled?"NextBSD "+NEW+" was downloaded and installed automatically. ":"NextBSD "+NEW+" is installed. ")+"It starts the next time you restart.",
@@ -604,9 +629,23 @@ const VIEW={
       callout("info",'<p>You’re still using NextBSD '+OLD+' until you restart.</p><p class="muted" style="font-size:11.5px">'+(be?"The update is waiting in a new boot environment; your current system stays as a backup.":"Some apps may behave oddly until you restart, because parts of the system were replaced while running.")+'</p>');
   },
   backupboot(){
-    return head({corner:"warn",title:"You started up from your backup",sub:"This is NextBSD "+OLD+", the system kept when you updated. NextBSD "+NEW+" is still installed.",
-      more:'<div class="acts">'+btn("b-restart-new","Restart into NextBSD "+NEW+"…",{primary:true})+'</div>'})+
-      callout("info",'<p>Update won’t offer '+NEW+' again while you’re using the backup.</p><p class="muted" style="font-size:11.5px">To keep using this system for good, make it the default in BootEnvironments. <button type="button" class="linkbtn" data-cmd="bootenv">Open BootEnvironments</button></p>');
+    const newest=S.bes[0].v;
+    return head({corner:"warn",title:"You’re using an earlier version",sub:"This is NextBSD "+S.installed+". NextBSD "+newest+" is still installed.",
+      more:'<div class="acts">'+btn("b-restart-new","Restart into NextBSD "+newest+"…",{primary:true})+btn("b-versions","Installed Versions…")+'</div>'})+
+      callout("info",'<p>Your accounts, files and settings are the same in every version.</p><p class="muted" style="font-size:11.5px">'+(S.next===S.installed?"This version now starts every time.":"NextBSD "+S.next+" still starts by default; this was a one-time start.")+' Update won’t offer '+newest+' again while you’re using an earlier version.</p>');
+  },
+  versions(){
+    if(!P.be)return head({title:"Installed Versions",sub:"Going back to an earlier version needs NextBSD installed on ZFS. This computer is on UFS, so updates install over the running system.",
+      more:'<div class="acts">'+btn("b-versions-done","Done",{primary:true})+'</div>'});
+    const rows=S.bes.map(b=>{
+      const run=b.v===S.installed,nx=b.v===S.next;
+      const tags=(run?'<span class="vtag">Running</span>':'')+(nx&&!run?'<span class="vtag next">Starts next</span>':'');
+      const acts=run?'':(btn("b-be-start-"+b.v,"Restart Into…",{small:true})+(nx?'':btn("b-be-rm-"+b.v,"Remove…",{small:true})));
+      return '<tr><td><span class="vn">NextBSD '+b.v+'</span>'+tags+'<span class="vd">Installed '+dateShort(b.at)+'</span></td><td class="size">'+(b.mb/1000).toFixed(1)+' GB</td><td class="act">'+acts+'</td></tr>'}).join("");
+    return head({title:"Installed Versions",sub:"Each update is installed alongside the others, so you can go back to an earlier version. Your accounts, files and settings are shared by all of them."})+
+      '<div class="pkgwrap" style="margin-top:14px"><table class="grid vers"><colgroup><col><col class="c-size"><col class="c-act"></colgroup><thead><tr><th scope="col">Version</th><th scope="col" class="size">Size</th><th scope="col"><span class="sr">Actions</span></th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+      '<div class="keep"><label for="keep-n">Keep the</label><span class="popup"><select id="keep-n">'+[2,3,5,10].map(n=>'<option'+(n===S.keep?' selected':'')+'>'+n+'</option>').join("")+'</select></span><span>most recent versions. Older ones are removed after an update.</span></div>'+
+      '<div class="acts">'+'<span class="sp"></span>'+btn("b-versions-done","Done",{primary:true})+'</div>';
   }
 };
 
@@ -629,10 +668,10 @@ function setPhase(p,opt){
 function render(){
   $("#win").hidden=!S.winOpen;$("#closedhint").hidden=S.winOpen||S.restarting;
   if(S.winOpen){
-    $("#view").innerHTML=VIEW[S.phase]();
-    if(S.phase==="downloading")updateDl();
-    if(S.phase==="installing"){refreshSteps();updateInstall()}
-    if(S.phase==="installing"||S.phase==="installfail")renderLog();
+    $("#view").innerHTML=S.showVersions?VIEW.versions():VIEW[S.phase]();
+    if(!S.showVersions&&S.phase==="downloading")updateDl();
+    if(!S.showVersions&&S.phase==="installing"){refreshSteps();updateInstall()}
+    if(!S.showVersions&&(S.phase==="installing"||S.phase==="installfail"))renderLog();
   }
   renderExtras();syncSim();
 }
@@ -783,7 +822,13 @@ const STEP={
     if(consumeFail("loader"))throw failErr("loader","efibootmgr: unable to write the EFI system partition: Device busy");
     if(I.be){st.sub="bectl activate "+NEW;updateInstall();log("bectl activate "+NEW+" (start "+NEW+" next time)")}
     await seg(st,pr,.5,1)},
-  async finish(st,pr){const I=S.inst;st.sub="";log("Cleaning up downloaded packages");if(I.be)log("bectl umount "+NEW);await seg(st,pr,0,1);log("Done. Restart to start NextBSD "+NEW+".")}
+  async finish(st,pr){const I=S.inst;st.sub="";log("Cleaning up downloaded packages");
+    if(I.be){log("bectl umount "+NEW);log("bectl activate "+NEW+" (starts next time; "+S.installed+" stays installed)");
+      S.bes.unshift({v:NEW,at:new Date(),mb:2160});S.next=NEW;
+      const old=S.bes.filter(b=>b.v!==S.installed&&b.v!==S.next).slice(Math.max(0,S.keep-2));
+      old.forEach(b=>log("bectl destroy "+b.v+" (keeps the "+S.keep+" most recent)"));
+      S.bes=S.bes.filter(b=>!old.includes(b))}
+    await seg(st,pr,0,1);log("Done. Restart to start NextBSD "+NEW+".")}
 };
 async function runInstall(auto){
   const be=P.be;
@@ -871,8 +916,10 @@ async function runRestart(){
   stage('<div><div class="bspin"></div><p class="bmsg">Quitting apps…</p></div>');await sleep(1500);
   boot.classList.add("black");stage('<div><div class="bspin"></div><p class="bmsg">Restarting…</p></div>');await sleep(2400);
   stage("");await sleep(700);
-  const entries=S.pendingBE?[{v:NEW,label:"NextBSD "+NEW,note:"new · default"},{v:OLD,label:"NextBSD "+OLD,note:"backup from "+dateShort(S.installedAt)}]:[{v:NEW,label:"NextBSD "+NEW,note:"default"}];
-  const pick=entries.length>1?await loaderChoose(entries):0;L=null;
+  const start=S.once||S.next;
+  const entries=P.be?S.bes.map(b=>({v:b.v,label:"NextBSD "+b.v,note:b.v===start?"default":b.v===S.installed?"running before":"installed "+dateShort(b.at)}))
+    .sort((a,b)=>(b.v===start)-(a.v===start)):[{v:NEW,label:"NextBSD "+NEW,note:"default"}];
+  const pick=entries.length>1?await loaderChoose(entries):0;L=null;S.once=null;
   const v=entries[pick].v;
   stage('<div class="splash"><div class="wordmark">Next<span>BSD</span></div><div class="prog" role="progressbar" aria-label="Starting up" aria-valuemin="0" aria-valuemax="100"><div class="bar" id="spbar"></div></div><p class="bmsg" id="spmsg"></p></div>');
   const msgs=v===NEW&&S.phase!=="backupboot"?[[0,"Starting NextBSD "+v],[.3,"Finishing the update…"],[.65,"Starting WindowServer"],[.9,"Logging in"]]:[[0,"Starting NextBSD "+v],[.6,"Starting WindowServer"],[.9,"Logging in"]];
@@ -882,15 +929,36 @@ async function runRestart(){
 }
 async function finishBoot(v){
   L=null;S.restarting=false;S.winOpen=true;
-  if(v===NEW){S.installed=NEW;S.justUpdated=true;S.noUpdates=false;S.backup=S.pendingBE?OLD:null;S.deferred=false;S.lastChecked=new Date()}
-  else{S.installed=OLD}
+  const was=S.installed,newest=P.be?S.bes[0].v:NEW;
+  if(v===NEW&&was!==NEW){S.installed=NEW;S.justUpdated=true;S.noUpdates=false;S.backup=S.pendingBE?OLD:null;S.deferred=false;S.lastChecked=new Date()}
+  else{S.installed=v;S.justUpdated=false}
+  S.showVersions=false;
   const boot=$("#boot");
-  setPhase(v===NEW?"uptodate":"backupboot",{keepFocus:true});
+  setPhase(v===newest?"uptodate":"backupboot",{keepFocus:true});
   boot.classList.add("out");
   await sleep(700);
   boot.hidden=true;boot.className="boot";stage("");
   const h=$("#vh1");if(h)h.focus({preventScroll:true});
-  status(v===NEW?"Welcome back. NextBSD "+NEW+" is installed.":"Started up from the backup, NextBSD "+OLD+".");
+  status(v===NEW&&was!==NEW?"Welcome back. NextBSD "+NEW+" is installed.":"Started up from NextBSD "+v+".");
+}
+function showVersions(on){
+  S.showVersions=on;render();
+  const t=$("#view [data-primary]")||$("#vh1");if(t)t.focus({preventScroll:true});
+  announce(on?"Installed versions.":ANN[S.phase]());
+}
+// Going back is "bectl activate" plus a restart: the chosen version starts from
+// now on. The loader's menu at startup is the one-time choice.
+function askStartFrom(v){
+  const newer=S.bes.findIndex(b=>b.v===v)<S.bes.findIndex(b=>b.v===S.installed);
+  openSheet({auth:true,title:"Restart into NextBSD "+v+"?",
+    text:(newer?"":"Apps and system files go back to NextBSD "+v+". ")+"Your accounts, files and settings stay as they are. NextBSD "+S.installed+" stays installed, and you can come back to it here. Enter an administrator’s name and password to continue.",
+    ok:"Restart",onOk:()=>{S.next=v;status("NextBSD "+v+" starts next time.");flow(runRestart())}});
+}
+function askRemove(v){
+  const b=S.bes.find(x=>x.v===v);
+  openSheet({auth:true,title:"Remove NextBSD "+v+"?",
+    text:"This frees about "+(b.mb/1000).toFixed(1)+" GB. Your accounts, files and settings aren’t affected, but you won’t be able to go back to this version. Enter an administrator’s name and password to continue.",
+    ok:"Remove",onOk:()=>{S.bes=S.bes.filter(x=>x.v!==v);render();status("NextBSD "+v+" was removed (bectl destroy "+v+").");announce("NextBSD "+v+" was removed.")}});
 }
 function confirmRestart(){
   openSheet({title:"Restart now?",text:"Open apps will quit. Make sure your work is saved.",ok:"Restart",icon:updateIcon(48),onOk:()=>flow(runRestart())});
@@ -965,7 +1033,7 @@ function command(c){
     case "install":openWin();askInstall();break;
     case "restart-ask":openWin();confirmRestart();break;
     case "software":status("Software opens its Updates view for apps you installed. (Not part of this prototype.)");break;
-    case "bootenv":status("BootEnvironments is a separate settings app. (Not part of this prototype.)");break;
+    case "versions":openWin();showVersions(true);break;
   }
 }
 
@@ -977,6 +1045,7 @@ $("#simtog").onclick=()=>setSimOpen($("#simbody").hidden);
 function syncSim(){
   $("#sim-fail").value=S.fail;$("#sim-once").checked=S.failOnce;
   document.querySelectorAll('input[name="sim-speed"]').forEach(r=>r.checked=+r.value===S.speed);
+  document.querySelectorAll('input[name="sim-fs"]').forEach(r=>r.checked=r.value===S.fs);
   $("#simstate").textContent=S.restarting?"restarting":S.phase+(S.phase==="downloading"&&S.dl.paused?" (paused)":"");
   $("#sim-skipwrap").hidden=!S.restarting;
 }
@@ -985,11 +1054,13 @@ $("#sim").addEventListener("change",e=>{
   if(t.id==="sim-fail"){S.fail=t.value;renderExtras();status(t.value==="none"?"Simulator: no forced failure.":"Simulator: the next “"+t.options[t.selectedIndex].text+"” will fail.")}
   if(t.id==="sim-once")S.failOnce=t.checked;
   if(t.name==="sim-speed")S.speed=+t.value;
+  if(t.name==="sim-fs"){S.fs=t.value;render();status(t.value==="zfs"?"Simulator: a ZFS install. Updates install into a new boot environment.":"Simulator: a UFS install. Updates install over the running system; no earlier versions.")}
 });
+document.addEventListener("change",e=>{if(e.target.id==="keep-n"){S.keep=+e.target.value;status("Update keeps the "+S.keep+" most recent versions.")}});
 function resetTo(kind){
   cancelFlows();closeMenus();if(sheet)closeSheet(false);
   const boot=$("#boot");boot.hidden=true;boot.className="boot";stage("");L=null;
-  Object.assign(S,{installed:OLD,justUpdated:false,noUpdates:false,backup:null,winOpen:true,inst:null,err:null,deferred:false,autoInstalled:false,installedAt:null,pendingBE:false,restarting:false,
+  Object.assign(S,{bes:freshBEs(),next:OLD,once:null,showVersions:false,installed:OLD,justUpdated:false,noUpdates:false,backup:null,winOpen:true,inst:null,err:null,deferred:false,autoInstalled:false,installedAt:null,pendingBE:false,restarting:false,
     dl:{bytes:0,rate:0,paused:false,auto:false}});
   if(kind==="start"){S.lastChecked=yesterday();setPhase("uptodate",{keepFocus:true});status("Simulator: NextBSD "+OLD+", not checked yet. Click Check for Updates.")}
   else if(kind==="available"){S.lastChecked=new Date();foundUpdate(true);status("Simulator: a check found NextBSD "+NEW+".")}
@@ -1007,6 +1078,8 @@ document.addEventListener("click",e=>{
   if(t.dataset.disc){const id=t.dataset.disc,open=t.getAttribute("aria-expanded")!=="true";S.open[id]=open;t.setAttribute("aria-expanded",open);$("#d-"+id).hidden=!open;if(id==="log"&&open){const l=$("#log");if(l)l.scrollTop=l.scrollHeight}return}
   if(t.dataset.ldr!=null&&L&&!L.done){L.sel=+t.dataset.ldr;L.done=true;L.resolve(L.sel);return}
   if(t.dataset.dock==="update"){if(S.winOpen)$("#win").scrollIntoView({block:"nearest"});else openWin();return}
+  if(t.id.startsWith("b-be-start-")){askStartFrom(t.id.slice(11));return}
+  if(t.id.startsWith("b-be-rm-")){askRemove(t.id.slice(8));return}
   switch(t.id){
     case "b-check":flow(runCheck());break;
     case "b-stop-check":cancelFlows();setPhase(S.prev==="checkfail"?"checkfail":"uptodate");status("Check stopped.");break;
@@ -1022,7 +1095,9 @@ document.addEventListener("click",e=>{
     case "b-later":S.deferred=true;setPhase("restart");status("You can restart from Update, the Dock or the menu bar when you’re ready.");break;
     case "b-restart":flow(runRestart());break;
     case "b-restart-ask":confirmRestart();break;
-    case "b-restart-new":S.pendingBE=true;confirmRestart();break;
+    case "b-restart-new":askStartFrom(S.bes[0].v);break;
+    case "b-versions":showVersions(true);break;
+    case "b-versions-done":showVersions(false);break;
     case "win-close":case "win-mini":closeWin();break;
   }
 });
