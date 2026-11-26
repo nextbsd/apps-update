@@ -632,7 +632,7 @@ const VIEW={
     const newest=S.bes[0].v;
     return head({corner:"warn",title:"You’re using an earlier version",sub:"This is NextBSD "+S.installed+". NextBSD "+newest+" is still installed.",
       more:'<div class="acts">'+btn("b-restart-new","Restart into NextBSD "+newest+"…",{primary:true})+btn("b-versions","Installed Versions…")+'</div>'})+
-      callout("info",'<p>Your accounts, files and settings are the same in every version.</p><p class="muted" style="font-size:11.5px">'+(S.next===S.installed?"This version now starts every time.":"NextBSD "+S.next+" still starts by default; this was a one-time start.")+' Update won’t offer '+newest+' again while you’re using an earlier version.</p>');
+      callout("info",'<p>Your accounts, files and settings are the same in every version.</p><p class="muted" style="font-size:11.5px">'+(S.next===S.installed?"This version now starts every time.":"This was a one-time start. NextBSD "+S.next+" starts on the next restart.")+' Update won’t offer '+newest+' again while you’re using an earlier version.</p>');
   },
   versions(){
     if(!P.be)return head({title:"Installed Versions",sub:"Going back to an earlier version needs NextBSD installed on ZFS. This computer is on UFS, so updates install over the running system.",
@@ -917,7 +917,7 @@ async function runRestart(){
   boot.classList.add("black");stage('<div><div class="bspin"></div><p class="bmsg">Restarting…</p></div>');await sleep(2400);
   stage("");await sleep(700);
   const start=S.once||S.next;
-  const entries=P.be?S.bes.map(b=>({v:b.v,label:"NextBSD "+b.v,note:b.v===start?"default":b.v===S.installed?"running before":"installed "+dateShort(b.at)}))
+  const entries=P.be?S.bes.map(b=>({v:b.v,label:"NextBSD "+b.v,note:b.v===S.installed?"running before":"installed "+dateShort(b.at)}))
     .sort((a,b)=>(b.v===start)-(a.v===start)):[{v:NEW,label:"NextBSD "+NEW,note:"default"}];
   const pick=entries.length>1?await loaderChoose(entries):0;L=null;S.once=null;
   const v=entries[pick].v;
